@@ -1,6 +1,30 @@
 .. _pyramid_restler_api:
 
 API
----
+===
 
-.. automodule:: pyramid_restler
+Configuration
+-------------
+
+.. autofunction:: pyramid_restler.config.add_restful_routes
+
+Interfaces
+----------
+
+.. autointerface:: pyramid_restler.interfaces.IView
+   :members:
+
+.. autointerface:: pyramid_restler.interfaces.IContext
+   :members:
+
+View
+----
+
+.. autoclass:: pyramid_restler.view.RESTfulView
+   :members:
+
+Model
+-----
+
+.. autoclass:: pyramid_restler.model.SQLAlchemyORMContext
+   :members:
