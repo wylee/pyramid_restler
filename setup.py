@@ -1,9 +1,12 @@
 from setuptools import setup, find_packages
 
 
+version = open('version.txt').read().strip()
+
+
 setup(
     name='pyramid_restler',
-    version='0.1dev',
+    version=version,
     description='RESTful views for Pyramid',
     author='Wyatt Lee Baldwin',
     author_email='wyatt.lee.baldwin@gmail.com',

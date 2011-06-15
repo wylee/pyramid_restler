@@ -18,6 +18,9 @@ import sys, os
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('.'))
 
+here = os.path.dirname(__file__)
+top_level = os.path.dirname(here)
+
 # -- General configuration -----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -52,7 +55,7 @@ copyright = u'2011, Wyatt Lee Baldwin <wyatt.lee.baldwin@gmail.com>'
 # built documents.
 #
 # The short X.Y version.
-version = '0.1'
+version = open(os.path.join(top_level, 'version.txt')).read().strip()
 # The full version, including alpha/beta/rc tags.
 release = version
 
