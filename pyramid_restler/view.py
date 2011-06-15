@@ -26,15 +26,22 @@ class RESTfulView(object):
         member = self.context.get_member(id)
         return self.render_to_response(member)
 
+    def _get_data(self):
+        content_type = self.request.content_type
+        if content_type == 'application/json':
+            data = json.loads(self.request.body)
+        elif content_type == 'application/x-www-form-urlencoded':
+            data = dict(self.request.POST)
+        return data
+
     def create_member(self):
-        data = dict(self.request.POST)
-        member = self.context.create_member(**data)
+        member = self.context.create_member(**self._get_data())
         headers = {'Location': ''}
         return Response(status=201, headers=headers)
 
     def update_member(self):
         id = self.request.matchdict['id']
-        self.context.update_member(id)
+        member = self.context.update_member(id, **self._get_data())
         return Response(status=204, content_type='')
 
     def delete_member(self):
