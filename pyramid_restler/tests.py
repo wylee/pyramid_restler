@@ -103,14 +103,18 @@ class Test_RESTfulView(TestCase):
         self.assertEqual(response.status_int, 200)
 
     def test_create_member(self):
-        request = DummyRequest(path='/thing', post={'val': 'four'})
+        request = DummyRequest(
+            path='/thing', post={'val': 'four'},
+            content_type='application/x-www-form-urlencoded')
         view = RESTfulView(_dummy_context_factory(), request)
         response = view.create_member()
         self.assertTrue(isinstance(response, Response))
         self.assertEqual(response.status_int, 201)
 
     def test_update_member(self):
-        request = DummyRequest(method='PUT', path='/thing/1', post={'val': 'ONE'})
+        request = DummyRequest(
+            method='PUT', path='/thing/1', post={'val': 'ONE'},
+            content_type='application/x-www-form-urlencoded')
         request.matchdict = {'id': 1}
         view = RESTfulView(_dummy_context_factory(), request)
         response = view.update_member()
@@ -118,7 +122,7 @@ class Test_RESTfulView(TestCase):
         self.assertEqual(response.status_int, 204)
 
     def test_delete_member(self):
-        request = DummyRequest(method='DELETE', path='/thing/1')
+        request = DummyRequest(method='DELETE', path='/thing/1',)
         request.matchdict = {'id': 1, 'renderer': 'json'}
         view = RESTfulView(_dummy_context_factory(), request)
         response = view.delete_member()
