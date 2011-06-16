@@ -13,6 +13,7 @@ setup(
     install_requires=(
         'pyramid>=1.0',
     ),
+    packages=find_packages(),
     classifiers=(
         'Development Status :: 2 - Pre-Alpha',
         'Framework :: Pylons',
