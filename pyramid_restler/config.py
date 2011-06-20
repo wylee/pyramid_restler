@@ -1,7 +1,8 @@
 from pyramid_restler.view import RESTfulView
 
 
-def add_restful_routes(self, name, factory, view_class=RESTfulView, **kwargs):
+def add_restful_routes(self, name, factory, view=RESTfulView,
+                       route_kw=None, view_kw=None):
     """Add a set of RESTful routes for an entity.
 
     URL patterns for an entity are mapped to a set of views encapsulated in
@@ -20,57 +21,40 @@ def add_restful_routes(self, name, factory, view_class=RESTfulView, **kwargs):
     any class that implements the :class:`pyramid_restler.interfaces.IContext`
     interface.
 
-    Any additional keyword args will be passed directly through to every
-    `add_route` call.
+    Additional route and view keyword args can be passed directly through to
+    all `add_route` and `add_view` calls. Pass ``route_kw`` and/or ``view_kw``
+    as dictionaries to do so.
 
     """
+    route_kw = {} if route_kw is None else route_kw
+    view_kw = {} if view_kw is None else view_kw
+
     subs = dict(
         name=name,
         slug=name.replace('_', '-'),
         id='{id:[^/\.]+}',
         renderer='{renderer:(\.[a-z]+)?}')
 
-    # GET collection
-    self.add_route(
-        'get_{name}_collection'.format(**subs),
-        '/{slug}{renderer}'.format(**subs),
-        request_method='GET',
-        view=view_class,
-        view_attr='get_collection',
-        factory=factory)
+    def add_route(name, pattern, attr, method):
+        name = name.format(**subs)
+        pattern = pattern.format(**subs)
+        self.add_route(name, pattern, factory=factory, **route_kw)
+        self.add_view(
+            view=view, attr=attr, request_method=method, route_name=name,
+            **view_kw)
+
+    # Get collection
+    add_route(
+        'get_{name}_collection', '/{slug}{renderer}', 'get_collection', 'GET')
 
     # Get member
-    self.add_route(
-        'get_{name}'.format(**subs),
-        '/{slug}/{id}{renderer}'.format(**subs),
-        request_method='GET',
-        view=view_class,
-        view_attr='get_member',
-        factory=factory)
+    add_route('get_{name}', '/{slug}/{id}{renderer}', 'get_member', 'GET')
 
     # Create member
-    self.add_route(
-        'create_{name}'.format(**subs),
-        '/{slug}'.format(**subs),
-        request_method='POST',
-        view=view_class,
-        view_attr='create_member',
-        factory=factory)
+    self.add_route('create_{name}', '/{slug}', 'create_member', 'POST')
 
     # Update member
-    self.add_route(
-        'update_{name}'.format(**subs),
-        '/{slug}/{id}'.format(**subs),
-        request_method='PUT',
-        view=view_class,
-        view_attr='update_member',
-        factory=factory)
+    self.add_route('update_{name}', '/{slug}/{id}', 'update_member', 'PUT')
 
     # Delete member
-    self.add_route(
-        'delete_{name}'.format(**subs),
-        '/{slug}/{id}'.format(**subs),
-        request_method='DELETE',
-        view=view_class,
-        view_attr='delete_member',
-        factory=factory)
+    self.add_route('delete_{name}', '/{slug}/{id}', 'delete_member', 'DELETE')
