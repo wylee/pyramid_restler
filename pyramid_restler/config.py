@@ -54,10 +54,10 @@ def add_restful_routes(self, name, factory, view=RESTfulView,
     add_route('get_{name}', '/{slug}/{id}{renderer}', 'get_member', 'GET')
 
     # Create member
-    self.add_route('create_{name}', '/{slug}', 'create_member', 'POST')
+    add_route('create_{name}', '/{slug}', 'create_member', 'POST')
 
     # Update member
-    self.add_route('update_{name}', '/{slug}/{id}', 'update_member', 'PUT')
+    add_route('update_{name}', '/{slug}/{id}', 'update_member', 'PUT')
 
     # Delete member
-    self.add_route('delete_{name}', '/{slug}/{id}', 'delete_member', 'DELETE')
+    add_route('delete_{name}', '/{slug}/{id}', 'delete_member', 'DELETE')
