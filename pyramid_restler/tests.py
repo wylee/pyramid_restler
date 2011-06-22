@@ -66,6 +66,23 @@ class Test_SQLAlchemyORMContext(TestCase):
         member = self.context.get_member(42)
         self.assert_(member is None)
 
+    def test_create_member(self):
+        member = self.context.create_member(value='four')
+        member = self.context.session.query(self.context.entity).get(member.id)
+        self.assertEqual(member, member)
+
+    def test_update_member(self):
+        self.context.update_member(1, value='ONE')
+        member = self.context.get_member(1)
+        self.assertEqual('ONE', member.value)
+
+    def test_delete_member(self):
+        member = self.context.get_member(1)
+        self.assert_(member is not None)
+        self.context.delete_member(1)
+        member = self.context.get_member(1)
+        self.assert_(member is None)
+
     def test_collection_to_json(self):
         collection = self.context.get_collection()
         json_collection = self.context.to_json(collection)
