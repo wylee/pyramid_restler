@@ -177,7 +177,7 @@ class Test_add_restful_routes(TestCase):
     def test_add_restful_routes(self):
         config = self._make_config(add_view=self._make_add_view())
         config.add_restful_routes('thing', _dummy_context_factory())
-        self.assertEqual(5, config.add_view.count())
+        self.assertEqual(7, config.add_view.count())
 
 
 def _dummy_context_factory():

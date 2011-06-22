@@ -35,8 +35,8 @@ def add_restful_routes(self, name, factory, view=RESTfulView,
     subs = dict(
         name=name,
         slug=name.replace('_', '-'),
-        id='{id:[^/\.]+}',
-        renderer='{renderer:(\.[a-z]+)?}')
+        id='{id}',
+        renderer='{renderer}')
 
     def add_route(name, pattern, attr, method):
         name = name.format(**subs)
@@ -48,10 +48,15 @@ def add_restful_routes(self, name, factory, view=RESTfulView,
 
     # Get collection
     add_route(
-        'get_{name}_collection', '/{slug}{renderer}', 'get_collection', 'GET')
+        'get_{name}_collection_rendered', '/{slug}.{renderer}',
+        'get_collection', 'GET')
+    add_route(
+        'get_{name}_collection', '/{slug}', 'get_collection', 'GET')
 
     # Get member
-    add_route('get_{name}', '/{slug}/{id}{renderer}', 'get_member', 'GET')
+    add_route(
+        'get_{name}_rendered', '/{slug}/{id}.{renderer}', 'get_member', 'GET')
+    add_route('get_{name}', '/{slug}/{id}', 'get_member', 'GET')
 
     # Create member
     add_route('create_{name}', '/{slug}', 'create_member', 'POST')
