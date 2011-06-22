@@ -41,10 +41,12 @@ def add_restful_routes(self, name, factory, view=RESTfulView,
     def add_route(name, pattern, attr, method):
         name = name.format(**subs)
         pattern = pattern.format(**subs)
-        self.add_route(name, pattern, factory=factory, **route_kw)
+        self.add_route(
+            name, pattern, factory=factory,
+            request_method=method, **route_kw)
         self.add_view(
-            view=view, attr=attr, request_method=method, route_name=name,
-            **view_kw)
+            view=view, attr=attr, route_name=name,
+            request_method=method, **view_kw)
 
     # Get collection
     add_route(
