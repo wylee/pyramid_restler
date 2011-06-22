@@ -36,7 +36,8 @@ class RESTfulView(object):
 
     def create_member(self):
         member = self.context.create_member(**self._get_data())
-        headers = {'Location': ''}
+        id = self.context.get_member_id_as_string(member)
+        headers = {'Location': '/'.join((self.request.path, id))}
         return Response(status=201, headers=headers)
 
     def update_member(self):
