@@ -79,6 +79,23 @@ class SQLAlchemyORMContext(object):
         self.session.delete(member)
         self.session.commit()
 
+    def get_member_id(self, member):
+        pk = member._sa_instance_state.key
+        if pk is None:
+            return None
+        vals = pk[1]
+        if len(vals) == 1:
+            return vals[0]
+        else:
+            return tuple(vals)
+
+    def get_member_id_as_string(self, member):
+        id = self.get_member_id(member)
+        if isinstance(id, basestring):
+            return id
+        else:
+            return json.dumps(id, cls=self.json_encoder)
+
     def to_json(self, value, fields=None, wrap=True):
         """Convert instance or sequence of instances to JSON.
 

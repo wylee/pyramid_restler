@@ -84,6 +84,11 @@ class Test_SQLAlchemyORMContext(TestCase):
         should_equal = {'id': 1, 'value': 'one'}
         self.assertEqual(json.loads(json_member)['results'], should_equal)
 
+    def test_get_member_id_as_string(self):
+        member = self.context.get_member(1)
+        id = self.context.get_member_id_as_string(member)
+        self.assertEqual(id, '1')
+
 
 class Test_RESTfulView(TestCase):
 
@@ -223,6 +228,9 @@ def _dummy_context_factory():
                 if m['id'] == id:
                     self._collection.pop(i)
             return None
+
+        def get_member_id_as_string(self, member):
+            return str(member['id'])
 
         def to_json(self, value, fields=None, wrap=True):
             if isinstance(value, dict):

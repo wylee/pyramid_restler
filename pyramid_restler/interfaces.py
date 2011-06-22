@@ -75,3 +75,6 @@ class IContext(Interface):
 
     def delete_member(id):
         """Delete an existing member."""
+
+    def get_member_id_as_string(member):
+        """Get string representation of ``member`` ID."""
