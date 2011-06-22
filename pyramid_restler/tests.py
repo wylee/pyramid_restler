@@ -215,7 +215,7 @@ def _dummy_context_factory():
             if member is None:
                 return None
             for name in data:
-                member[name] == data[name]
+                member[name] = data[name]
             return member
 
         def delete_member(self, id):
