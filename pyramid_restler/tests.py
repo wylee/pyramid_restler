@@ -2,6 +2,7 @@ import json
 from unittest import TestCase
 
 from pyramid.config import Configurator
+from pyramid.events import NewRequest
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
 from pyramid.response import Response
 from pyramid.testing import DummyRequest
@@ -200,6 +201,75 @@ class Test_add_restful_routes(TestCase):
         config = self._make_config(add_view=self._make_add_view())
         config.add_restful_routes('thing', _dummy_context_factory())
         self.assertEqual(7, config.add_view.count())
+
+
+class Test_POST_tunneling(TestCase):
+
+    def _make_app(self):
+        config = Configurator()
+        config.include('pyramid_restler')
+        config.enable_POST_tunneling()
+        return config.make_wsgi_app()
+
+    def test_POST_without_tunnel(self):
+        app = self._make_app()
+        request = DummyRequest(method='POST')
+        self.assertEqual('POST', request.method)
+        self.assert_('$method' not in request.params)
+        app.registry.notify(NewRequest(request))
+        self.assertEqual('POST', request.method)
+        self.assert_('$method' not in request.params)
+
+    def _assert_before(self, request):
+        self.assertEqual('POST', request.method)
+
+    def _assert_after(self, request, method):
+        self.assertEqual(request.method, method)
+        self.assert_('$method' not in request.GET)
+        self.assert_('$method' not in request.POST)
+        self.assert_('X-HTTP-Method-Override' not in request.headers)
+
+    def test_PUT_using_GET_param(self):
+        app = self._make_app()
+        request = DummyRequest(method='POST')
+        request.GET = {'$method': 'PUT'}
+        request.POST = {'$method': 'DUMMY'}
+        request.headers['X-HTTP-Method-Override'] = 'DUMMY'
+        self._assert_before(request)
+        app.registry.notify(NewRequest(request))
+        self._assert_after(request, 'PUT')
+
+    def test_PUT_using_POST_param(self):
+        app = self._make_app()
+        request = DummyRequest(method='POST')
+        request.POST = {'$method': 'PUT'}
+        request.headers['X-HTTP-Method-Override'] = 'DUMMY'
+        self._assert_before(request)
+        app.registry.notify(NewRequest(request))
+        self._assert_after(request, 'PUT')
+
+    def test_PUT_using_header(self):
+        app = self._make_app()
+        request = DummyRequest(method='POST')
+        request.headers['X-HTTP-Method-Override'] = 'PUT'
+        self._assert_before(request)
+        app.registry.notify(NewRequest(request))
+        self._assert_after(request, 'PUT')
+
+    def test_DELETE_using_POST_param(self):
+        app = self._make_app()
+        request = DummyRequest(method='POST')
+        request.POST = {'$method': 'DELETE'}
+        request.headers['X-HTTP-Method-Override'] = 'DUMMY'
+        self._assert_before(request)
+        app.registry.notify(NewRequest(request))
+        self._assert_after(request, 'DELETE')
+
+    def test_unknown_method_using_param(self):
+        app = self._make_app()
+        request = DummyRequest(params={'$method': 'PANTS'}, method='POST')
+        self._assert_before(request)
+        self.assertRaises(HTTPBadRequest, app.registry.notify, NewRequest(request))
 
 
 def _dummy_context_factory():

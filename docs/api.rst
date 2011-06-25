@@ -8,6 +8,8 @@ Configuration
 
 .. autofunction:: pyramid_restler.config.add_restful_routes
 
+.. autofunction:: pyramid_restler.config.enable_POST_tunneling
+
 Interfaces
 ----------
 
