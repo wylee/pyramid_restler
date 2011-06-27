@@ -55,13 +55,13 @@ class SQLAlchemyORMContext(object):
         q = self.session.query(self.entity)
         return q.get(id)
 
-    def create_member(self, **data):
+    def create_member(self, data):
         member = self.entity(**data)
         self.session.add(member)
         self.session.commit()
         return member
 
-    def update_member(self, id, **data):
+    def update_member(self, id, data):
         q = self.session.query(self.entity)
         member = q.get(id)
         if member is None:

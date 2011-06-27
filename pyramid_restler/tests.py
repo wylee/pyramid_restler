@@ -70,12 +70,12 @@ class Test_SQLAlchemyORMContext(TestCase):
         self.assert_(member is None)
 
     def test_create_member(self):
-        member = self.context.create_member(value='four')
+        member = self.context.create_member(dict(value='four'))
         member = self.context.session.query(self.context.entity).get(member.id)
         self.assertEqual(member, member)
 
     def test_update_member(self):
-        self.context.update_member(1, value='ONE')
+        self.context.update_member(1, dict(value='ONE'))
         member = self.context.get_member(1)
         self.assertEqual('ONE', member.value)
 
@@ -326,12 +326,12 @@ def _dummy_context_factory():
         def get_member(self, id):
             return self._get_member_by_id(id)
 
-        def create_member(self, **data):
+        def create_member(self, data):
             next_id = max(m['id'] for m in self._collection) + 1
             member = {'id': next_id, 'val': data['val']}
             return member
 
-        def update_member(self, id, **data):
+        def update_member(self, id, data):
             member = self._get_member_by_id(id)
             if member is None:
                 return None

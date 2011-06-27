@@ -35,14 +35,14 @@ class RESTfulView(object):
         return data
 
     def create_member(self):
-        member = self.context.create_member(**self._get_data())
+        member = self.context.create_member(self._get_data())
         id = self.context.get_member_id_as_string(member)
         headers = {'Location': '/'.join((self.request.path, id))}
         return Response(status=201, headers=headers)
 
     def update_member(self):
         id = self.request.matchdict['id']
-        member = self.context.update_member(id, **self._get_data())
+        member = self.context.update_member(id, self._get_data())
         return Response(status=204, content_type='')
 
     def delete_member(self):
