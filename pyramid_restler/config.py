@@ -110,10 +110,10 @@ def enable_POST_tunneling(self, allowed_methods=('PUT', 'DELETE')):
             else:
                 return  # Not a tunneled request
             if method in allowed_methods:
-                request.method = method
                 request.GET.pop(param_name, None)
                 request.POST.pop(param_name, None)
                 request.headers.pop(header_name, None)
+                request.method = method
             else:
                 raise HTTPBadRequest(disallowed_message)
     self.add_subscriber(new_request_subscriber, NewRequest)
