@@ -71,7 +71,6 @@ class RESTfulView(object):
             return 'json'
         elif request.accept.best_match(['application/xml']):
             return 'xml'
-        return renderer
 
     def render_json(self, value):
         response_data = dict(
