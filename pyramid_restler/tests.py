@@ -160,7 +160,7 @@ class Test_RESTfulView(TestCase):
         self.assertRaises(HTTPNotFound, view.get_member)
 
     def test_get_member_specific_fields(self):
-        request = DummyRequest(path='/thing/1.json', params={'fields': '["id"]'})
+        request = DummyRequest(path='/thing/1.json', params={'$fields': '["id"]'})
         request.matchdict = {'id': 1, 'renderer': 'json'}
         view = RESTfulView(_dummy_context_factory(), request)
         response = view.get_member()

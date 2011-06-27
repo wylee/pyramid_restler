@@ -85,12 +85,12 @@ class RESTfulView(object):
 
     @reify
     def fields(self):
-        fields = self.request.params.get('fields', None)
+        fields = self.request.params.get('$fields', None)
         if fields is not None:
             fields = json.loads(fields)
         return fields
 
     @reify
     def wrap(self):
-        wrap = self.request.params.get('wrap', 'true').strip().lower()
+        wrap = self.request.params.get('$wrap', 'true').strip().lower()
         return wrap in ('1', 'true')
