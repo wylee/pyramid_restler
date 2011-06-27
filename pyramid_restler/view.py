@@ -75,7 +75,7 @@ class RESTfulView(object):
 
     def render_json(self, value):
         response_data = dict(
-            body=self.context.to_json(value, self.fields),
+            body=self.context.to_json(value, self.fields, self.wrap),
             content_type='application/json',
         )
         return response_data

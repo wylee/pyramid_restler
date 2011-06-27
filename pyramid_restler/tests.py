@@ -167,6 +167,26 @@ class Test_RESTfulView(TestCase):
         member = json.loads(response.body)['results'][0]
         self.assert_(member.keys() == ['id'])
 
+    def test_wrapped_response(self):
+        request = DummyRequest(path='/thing/1.json', params={'$wrap': 'true'})
+        request.matchdict = {'id': 1, 'renderer': 'json'}
+        view = RESTfulView(_dummy_context_factory(), request)
+        self.assertTrue(view.wrap)
+        response = view.get_member()
+        content = json.loads(response.body)
+        self.assert_('results' in content)
+        member = content['results'][0]
+        self.assert_('id' in member and 'val' in member)
+
+    def test_unwrapped_response(self):
+        request = DummyRequest(path='/thing/1.json', params={'$wrap': 'false'})
+        request.matchdict = {'id': 1, 'renderer': 'json'}
+        view = RESTfulView(_dummy_context_factory(), request)
+        self.assertFalse(view.wrap)
+        response = view.get_member()
+        member = json.loads(response.body)[0]
+        self.assert_('id' in member and 'val' in member)
+
     def test_unknown_renderer_should_raise_400(self):
         request = DummyRequest(path='/thing/1.xyz')
         request.matchdict = {'id': 1, 'renderer': 'xyz'}
@@ -327,6 +347,8 @@ def _dummy_context_factory():
                     value[i] = dict((k, r[k]) for k in fields)
             if wrap:
                 response = dict(results=value)
+            else:
+                response = value
             return json.dumps(response)
 
     return Context()
