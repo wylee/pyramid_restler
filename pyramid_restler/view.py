@@ -81,7 +81,7 @@ class RESTfulView(object):
         return response_data
 
     def render_xml(self, value):
-        raise NotImplementedError('XML renderer not implemented.')
+        raise HTTPBadRequest('XML renderer not implemented.')
 
     @reify
     def fields(self):
