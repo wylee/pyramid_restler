@@ -7,6 +7,8 @@ from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
 from pyramid.response import Response
 from pyramid.testing import DummyRequest
 
+from webob.request import MIMEAccept
+
 try:
     import sqlalchemy
 except ImportError:
@@ -186,6 +188,13 @@ class Test_RESTfulView(TestCase):
         response = view.get_member()
         member = json.loads(response.body)[0]
         self.assert_('id' in member and 'val' in member)
+
+    def test_xml_renderer(self):
+        request = DummyRequest(path='/thing/1')
+        request.accept = MIMEAccept('Accept', 'application/xml')
+        request.matchdict = {'id': 1}
+        view = RESTfulView(_dummy_context_factory(), request)
+        self.assertRaises(HTTPBadRequest, view.get_member)
 
     def test_unknown_renderer_should_raise_400(self):
         request = DummyRequest(path='/thing/1.xyz')
