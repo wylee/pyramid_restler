@@ -44,10 +44,11 @@ class RESTfulView(object):
         id = self.request.matchdict['id']
         member = self.context.update_member(id, self._get_data())
         if member is None:
-            if 'id' not in self.request.POST:
-                self.request.POST['id'] = id
-            return self.create_member()
-        return Response(status=204, content_type='')
+            member = self.context.create_member(self._get_data())
+            headers = {'Location': self.request.path}
+            return Response(status=201, headers=headers)
+        else:
+            return Response(status=204, content_type='')
 
     def delete_member(self):
         id = self.request.matchdict['id']
