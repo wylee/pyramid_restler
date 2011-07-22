@@ -27,7 +27,7 @@ def add_restful_routes(self, name, factory, view=RESTfulView,
     ``view`` must be a view class that implements the
     :class:`pyramid_restler.interfaces.IView` interface.
 
-    Additional route and view keyword args can be passed directly through
+    Additional route and view keyword args can be passed directly through to
     all `add_route` and `add_view` calls. Pass ``route_kw`` and/or ``view_kw``
     as dictionaries to do so.
 

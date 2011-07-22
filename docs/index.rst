@@ -7,14 +7,14 @@ Overview
 pyramid_restler is a somewhat-opinionated toolkit for building RESTful Web
 services and applications on top of the Pyramid framework. Essentially, it
 routes HTTP requests to Pyramid views. These views interact with model
-entities via a uniform context interface, and then respond with appropriate
+entities via a uniform context interface and then respond with appropriate
 status codes and entity representations.
 
 Routes
 ------
 
 A Pyramid configuration directive is provided that makes generating the
-various routes for an entity easy::
+various routes and views for an entity easy::
 
     config.add_restful_routes('thing', ThingModel)
 
@@ -35,8 +35,8 @@ Views
 -----
 
 RESTful views are implemented as a standard set of methods in view classes.
-The :class:`pyramid_restler.interfaces.IView` describes how such classes
-should be implemented. A default view class,
+The :class:`pyramid_restler.interfaces.IView` interface describes how such
+classes should be implemented. A default view class,
 :class:`pyramid_restler.view.RESTfulView`, is provided, which should be
 sufficient for many applications.
 

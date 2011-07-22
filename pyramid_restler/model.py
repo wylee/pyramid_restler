@@ -30,7 +30,7 @@ class DefaultJSONEncoder(json.JSONEncoder):
 
 
 class SQLAlchemyORMContext(object):
-    """Adapts SQLAlchemy ORM classes to the
+    """Adapts a SQLAlchemy ORM class to the
     :class:`pyramid_restler.interfaces.IContext` interface."""
 
     implements(IContext)

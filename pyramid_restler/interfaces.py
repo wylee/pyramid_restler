@@ -9,35 +9,35 @@ class IView(Interface):
     def get_collection():
         """Get the entire collection.
 
-        GET /entity -> 200, list of members
+        GET /entity -> 200 OK, list of members
 
         """
 
     def get_member():
         """Get a specific member by ID.
 
-        GET /entity/id -> 200, member
+        GET /entity/id -> 200 OK, member
 
         """
 
     def create_member():
         """Create a new member.
 
-        POST /entity?POST_data -> 201, location of new member
+        POST /entity?POST_data -> 201 Created, location of new member
 
         """
 
     def update_member(id):
         """Update an existing member.
 
-        PUT /entity/id?POST_data -> 204
+        PUT /entity/id?POST_data -> 204 No Content
 
         """
 
     def delete_member(id):
         """Delete an existing member.
 
-        DELETE /entity/id -> 204
+        DELETE /entity/id -> 204 No Content
 
         """
 
