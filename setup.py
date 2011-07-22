@@ -11,7 +11,7 @@ setup(
     author='Wyatt Lee Baldwin',
     author_email='wyatt.lee.baldwin@gmail.com',
     install_requires=(
-        'pyramid>=1.0',
+        'pyramid>=1.1',
     ),
     packages=find_packages(),
     classifiers=(
