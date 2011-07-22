@@ -7,4 +7,4 @@
 0.1a1 (2011-07-06)
 ------------------
 
-- Nothing yet.
+- Initial version.
