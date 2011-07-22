@@ -1,4 +1,4 @@
-0.1a2 (unreleased)
+0.1a2 (2011-07-22)
 ------------------
 
 - Upgraded Pyramid from 1.0 to 1.1.
