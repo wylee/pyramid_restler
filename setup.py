@@ -10,6 +10,7 @@ setup(
     description='RESTful views for Pyramid',
     author='Wyatt Lee Baldwin',
     author_email='wyatt.lee.baldwin@gmail.com',
+    keywords='Web REST Pylons Pyramid',
     install_requires=(
         'pyramid>=1.1',
     ),
