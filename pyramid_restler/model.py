@@ -163,20 +163,24 @@ class SQLAlchemyORMContext(object):
         returned as-is.
 
         """
+        obj = self.get_json_obj(value, fields, wrap)
+        return json.dumps(obj, cls=self.json_encoder)
+
+    def get_json_obj(self, value, fields, wrap):
         if fields is None:
             fields = self.default_fields
-        if isinstance(value, Iterable):
-            result = [self.member_to_dict(m, fields) for m in value]
-            result_count = len(result)
-        else:
-            result = self.member_to_dict(value, fields)
-            result_count = 1
+        if not isinstance(value, Iterable):
+            value = [value]
+        obj = [self.member_to_dict(m, fields) for m in value]
         if wrap:
-            result = dict(
-                results=result,
-                result_count=result_count,
-            )
-        return json.dumps(result, cls=self.json_encoder)
+            obj = self.wrap_json_obj(obj)
+        return obj
+
+    def wrap_json_obj(self, obj):
+        return dict(
+            results=obj,
+            result_count=len(obj),
+        )
 
     def member_to_dict(self, member, fields=None):
         if fields is None:

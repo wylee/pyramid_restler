@@ -101,7 +101,7 @@ class Test_SQLAlchemyORMContext(TestCase):
         member = self.context.get_member(1)
         json_member = self.context.to_json(member)
         self.assertTrue(isinstance(json_member, basestring))
-        should_equal = {'id': 1, 'value': 'one'}
+        should_equal = [{'id': 1, 'value': 'one'}]
         self.assertEqual(json.loads(json_member)['results'], should_equal)
 
     def test_get_member_id_as_string(self):
