@@ -320,7 +320,7 @@ def _dummy_context_factory():
             else:
                 return None
 
-        def get_collection(self):
+        def get_collection(self, **kwargs):
             return self._collection
 
         def get_member(self, id):

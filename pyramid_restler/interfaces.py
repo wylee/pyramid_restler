@@ -61,8 +61,13 @@ class IContext(Interface):
     def __init__(request):
         """Initialize context."""
 
-    def get_collection():
-        """Return the entire collection."""
+    def get_collection(**kwargs):
+        """Return the entire collection by default.
+
+        Implementation-specific keyword args may be passed to filter the
+        collection or alter it in various ways.
+
+        """
 
     def get_member(id):
         """Return the member identified by ``id``."""
