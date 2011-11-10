@@ -191,7 +191,7 @@ class Test_RESTfulView(TestCase):
 
     def test_xml_renderer(self):
         request = DummyRequest(path='/thing/1')
-        request.accept = MIMEAccept('Accept', 'application/xml')
+        request.accept = MIMEAccept('application/xml')
         request.matchdict = {'id': 1}
         view = RESTfulView(_dummy_context_factory(), request)
         self.assertRaises(HTTPBadRequest, view.get_member)
