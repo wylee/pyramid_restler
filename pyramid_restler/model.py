@@ -133,6 +133,7 @@ class SQLAlchemyORMContext(object):
             return None
         self.session.delete(member)
         self.session.commit()
+        return member
 
     def get_member_id(self, member):
         pk = member._sa_instance_state.key

@@ -52,7 +52,9 @@ class RESTfulView(object):
 
     def delete_member(self):
         id = self.request.matchdict['id']
-        self.context.delete_member(id)
+        member = self.context.delete_member(id)
+        if member is None:
+            raise HTTPNotFound(self.context)
         return Response(status=204, content_type='')
 
     def render_to_response(self, value, fields=None):
