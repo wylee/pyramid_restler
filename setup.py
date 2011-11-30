@@ -12,7 +12,7 @@ setup(
     author_email='wyatt.lee.baldwin@gmail.com',
     keywords='Web REST Pylons Pyramid',
     install_requires=(
-        'pyramid>=1.1',
+        'pyramid>=1.2.3',
     ),
     packages=find_packages(),
     classifiers=(
