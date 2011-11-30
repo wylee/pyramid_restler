@@ -18,7 +18,10 @@ class RESTfulView(object):
         self.request = request
 
     def get_collection(self):
-        collection = self.context.get_collection()
+        kwargs = self.request.params.get('$$', {})
+        if kwargs:
+            kwargs = json.loads(kwargs)
+        collection = self.context.get_collection(**kwargs)
         return self.render_to_response(collection)
 
     def get_member(self):

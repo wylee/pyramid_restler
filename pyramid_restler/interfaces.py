@@ -11,6 +11,12 @@ class IView(Interface):
 
         GET /entity -> 200 OK, list of members
 
+        If a query parameter named $$ is present on the request, it must be
+        a JSON object with keys that correspond to the keyword args of the
+        context's `get_collection` method. The object will be JSON-decoded,
+        but no further processing will be done on the resulting dict (i.e.,
+        types won't be coerced, etc).
+
         """
 
     def get_member():
