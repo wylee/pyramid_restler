@@ -16,7 +16,7 @@ setup(
     ),
     packages=find_packages(),
     classifiers=(
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 3 - Alpha',
         'Framework :: Pylons',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
