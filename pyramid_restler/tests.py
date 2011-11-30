@@ -79,6 +79,11 @@ class Test_SQLAlchemyORMContext(TestCase):
         member = self.context.get_member(1)
         self.assertEqual('ONE', member.value)
 
+    def test_update_nonexistent_member(self):
+        self.context.update_member(42, dict(value='Forty-two'))
+        member = self.context.get_member(42)
+        self.assert_(member is None)
+
     def test_delete_member(self):
         member = self.context.get_member(1)
         self.assert_(member is not None)
@@ -147,6 +152,17 @@ class Test_RESTfulView(TestCase):
         response = view.update_member()
         self.assertTrue(isinstance(response, Response))
         self.assertEqual(response.status_int, 204)
+
+    def test_update_nonexistent_member(self):
+        request = DummyRequest(
+            method='PUT', path='/thing/42', post={'val': 'Forty-two'},
+            content_type='application/x-www-form-urlencoded')
+        request.matchdict = {'id': 42}
+        view = RESTfulView(_dummy_context_factory(), request)
+        response = view.update_member()
+        self.assertEqual(response.status_int, 201)
+        self.assert_('Location' in response.headers)
+        self.assertEqual(response.headers['Location'], '/thing/42')
 
     def test_delete_member(self):
         request = DummyRequest(method='DELETE', path='/thing/1',)
