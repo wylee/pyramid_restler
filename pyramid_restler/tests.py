@@ -128,11 +128,13 @@ class Test_RESTfulView(TestCase):
         self.assertEqual(response.status_int, 200)
 
     def test_create_member(self):
+        context = _dummy_context_factory()
         request = DummyRequest(
             path='/thing', post={'val': 'four'},
             content_type='application/x-www-form-urlencoded')
-        view = RESTfulView(_dummy_context_factory(), request)
+        view = RESTfulView(context, request)
         response = view.create_member()
+        self.assert_(context.get_member(4) is not None)
         self.assertTrue(isinstance(response, Response))
         self.assertEqual(response.status_int, 201)
 
@@ -329,6 +331,7 @@ def _dummy_context_factory():
         def create_member(self, data):
             next_id = max(m['id'] for m in self._collection) + 1
             member = {'id': next_id, 'val': data['val']}
+            self._collection.append(member)
             return member
 
         def update_member(self, id, data):
