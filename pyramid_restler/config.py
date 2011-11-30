@@ -34,6 +34,7 @@ def add_restful_routes(self, name, factory, view=RESTfulView,
     """
     route_kw = {} if route_kw is None else route_kw
     view_kw = {} if view_kw is None else view_kw
+    view_kw.setdefault('http_cache', 0)
 
     subs = dict(
         name=name,
