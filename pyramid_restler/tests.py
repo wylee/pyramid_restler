@@ -157,6 +157,12 @@ class Test_RESTfulView(TestCase):
         self.assertEqual(response.status_int, 204)
         self.assertRaises(HTTPNotFound, view.get_member)
 
+    def test_delete_nonexistent_member(self):
+        request = DummyRequest(method='DELETE', path='/thing/does_not_exist',)
+        request.matchdict = {'id': 'does_not_exist', 'renderer': 'json'}
+        view = RESTfulView(_dummy_context_factory(), request)
+        self.assertRaises(HTTPNotFound, view.delete_member)
+
     def test_get_nonexistent_member_should_raise_404(self):
         request = DummyRequest(path='/thing/42.json')
         request.matchdict = {'id': 42, 'renderer': 'json'}
