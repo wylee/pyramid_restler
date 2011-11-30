@@ -11,7 +11,7 @@ from webob.request import MIMEAccept
 
 try:
     import sqlalchemy
-except ImportError:
+except ImportError:  # pragma: no cover
     pass
 else:
     from sqlalchemy.engine import create_engine
