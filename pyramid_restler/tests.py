@@ -342,7 +342,7 @@ def _dummy_context_factory():
         def delete_member(self, id):
             for i, m in enumerate(self._collection):
                 if m['id'] == id:
-                    self._collection.pop(i)
+                    return self._collection.pop(i)
             return None
 
         def get_member_id_as_string(self, member):
