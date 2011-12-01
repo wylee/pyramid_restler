@@ -11,6 +11,7 @@ setup(
     author='Wyatt Lee Baldwin',
     author_email='wyatt.lee.baldwin@gmail.com',
     keywords='Web REST Pylons Pyramid',
+    url='https://bitbucket.org/wyatt/pyramid_restler',
     install_requires=(
         'pyramid>=1.2.3',
     ),
