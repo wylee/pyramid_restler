@@ -1,4 +1,4 @@
-0.1a3 (unreleased)
+0.1a3 (2011-11-30)
 ------------------
 
 - Changed project status from pre-alpha to alpha.
