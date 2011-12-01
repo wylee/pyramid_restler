@@ -240,6 +240,16 @@ class Test_RESTfulView(TestCase):
         member = json.loads(response.body)[0]
         self.assert_('id' in member and 'val' in member)
 
+    def test_accept_application_json(self):
+        request = DummyRequest(path='/thing/1')
+        request.accept = MIMEAccept('application/json')
+        request.matchdict = {'id': 1}
+        view = RESTfulView(_dummy_context_factory(), request)
+        response = view.get_member()
+        self.assertEqual(response.content_type, 'application/json')
+        member = json.loads(response.body)['results'][0]
+        self.assertEqual(member['id'], 1)
+
     def test_xml_renderer(self):
         request = DummyRequest(path='/thing/1')
         request.accept = MIMEAccept('application/xml')
