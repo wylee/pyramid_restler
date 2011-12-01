@@ -60,6 +60,11 @@ class Test_SQLAlchemyORMContext(TestCase):
         collection = self.context.get_collection()
         self.assertEqual(3, len(collection))
 
+    def test_get_collection_with_kwargs(self):
+        collection = self.context.get_collection(filters={'value': 'three'})
+        self.assertEqual(1, len(collection))
+        self.assertEqual(collection[0].value, 'three')
+
     def test_get_member(self):
         member = self.context.get_member(1)
         self.assertEqual(member.id, 1)
@@ -123,6 +128,18 @@ class Test_RESTfulView(TestCase):
         view = RESTfulView(_dummy_context_factory(), request)
         response = view.get_collection()
         self.assertTrue(isinstance(response, Response))
+
+    def test_get_collection_with_kwargs(self):
+        context = _dummy_context_factory()
+        request = DummyRequest(
+            path='/thing.json',
+            params={'$$': '{"filters":{"val":"three"}}'})
+        request.matchdict = {'renderer': 'json'}
+        view = RESTfulView(context, request)
+        response = view.get_collection()
+        results = json.loads(response.body)['results']
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]['val'], 'three')
 
     def test_get_member(self):
         request = DummyRequest(path='/thing/1.json')
@@ -344,8 +361,13 @@ def _dummy_context_factory():
             else:
                 return None
 
-        def get_collection(self, **kwargs):
-            return self._collection
+        def get_collection(self, filters=None, **kwargs):
+            collection = []
+            if filters is not None:
+                for m in self._collection:
+                    if all(m[k] == v for k, v in filters.items()):
+                        collection.append(m)
+            return collection
 
         def get_member(self, id):
             return self._get_member_by_id(id)
