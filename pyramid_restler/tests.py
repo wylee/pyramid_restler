@@ -160,6 +160,16 @@ class Test_RESTfulView(TestCase):
         self.assertTrue(isinstance(response, Response))
         self.assertEqual(response.status_int, 201)
 
+    def test_create_member_from_json(self):
+        context = _dummy_context_factory()
+        request = DummyRequest(
+            path='/thing', body='{"val": "four"}',
+            content_type='application/json')
+        view = RESTfulView(context, request)
+        response = view.create_member()
+        self.assertEqual(response.status_int, 201)
+        self.assert_(context.get_member(4) is not None)
+
     def test_update_member(self):
         request = DummyRequest(
             method='PUT', path='/thing/1', post={'val': 'ONE'},
