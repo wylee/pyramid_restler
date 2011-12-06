@@ -18,16 +18,10 @@ class RESTfulView(object):
         self.request = request
 
     def get_collection(self):
-        kwargs = self.request.params.get('$$', {})
-        if kwargs:
-            kwargs = json.loads(kwargs)
-        collection = self.context.get_collection(**kwargs)
-        return self.render_to_response(collection)
+        return self.render_to_response(self.context)
 
     def get_member(self):
-        id = self.request.matchdict['id']
-        member = self.context.get_member(id)
-        return self.render_to_response(member)
+        return self.render_to_response(self.context)
 
     def _get_data(self):
         content_type = self.request.content_type
@@ -38,31 +32,24 @@ class RESTfulView(object):
         return data
 
     def create_member(self):
-        member = self.context.create_member(self._get_data())
-        id = self.context.get_member_id_as_string(member)
+        self.context.create(self._get_data())
+        id = self.context.id_as_string
         headers = {'Location': '/'.join((self.request.path, id))}
         return Response(status=201, headers=headers)
 
     def update_member(self):
-        id = self.request.matchdict['id']
-        member = self.context.update_member(id, self._get_data())
-        if member is None:
-            member = self.context.create_member(self._get_data())
+        if self.context is None:
+            self.context.create(self._get_data())
             headers = {'Location': self.request.path}
             return Response(status=201, headers=headers)
-        else:
-            return Response(status=204, content_type='')
+        self.context.update(self._get_data())
+        return Response(status=204, content_type='')
 
     def delete_member(self):
-        id = self.request.matchdict['id']
-        member = self.context.delete_member(id)
-        if member is None:
-            raise HTTPNotFound(self.context)
+        self.context.delete()
         return Response(status=204, content_type='')
 
     def render_to_response(self, value, fields=None):
-        if value is None:
-            raise HTTPNotFound(self.context)
         renderer = self.determine_renderer()
         try:
             renderer = getattr(self, 'render_{0}'.format(renderer))
@@ -84,7 +71,7 @@ class RESTfulView(object):
 
     def render_json(self, value):
         response_data = dict(
-            body=self.context.to_json(value, self.fields, self.wrap),
+            body=self.context.to_json(self.fields, self.wrap),
             content_type='application/json',
         )
         return response_data

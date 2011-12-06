@@ -57,17 +57,35 @@ class IView(Interface):
         """
 
 
+class ICollection(Interface):
+    """Marker interface for model classes."""
+
+
+class IMember(Interface):
+    """Marker interface for model instances. ???"""
+
+
 class IContext(Interface):
-    """Interface for adapting a model entity to a view context."""
-
-    entity = Attribute('The entity to operate on.')
-
-    default_fields = Attribute('A list of fields to include in the result.')
+    """Adapt a model to a request context."""
 
     def __init__(request):
         """Initialize context."""
 
-    def get_collection(**kwargs):
+    def fetch():
+        """Fetch the data for this context.
+
+        For collection contexts, this should fetch the entire collection or
+        a subset of it. For member contexts, this should fetch a specific
+        member.
+
+        """
+
+
+class ICollectionContext(IContext):
+
+    entity = Attribute('The entity to operate on.')
+
+    def fetch(**kwargs):
         """Return the entire collection by default.
 
         Implementation-specific keyword args may be passed to filter the
@@ -75,17 +93,22 @@ class IContext(Interface):
 
         """
 
-    def get_member(id):
-        """Return the member identified by ``id``."""
+    def create(data):
+        """Add a new member to this collection."""
 
-    def create_member(**data):
-        """Create a new member."""
 
-    def update_member(id, **data):
-        """Update an existing member."""
+class IMemberContext(IContext):
 
-    def delete_member(id):
-        """Delete an existing member."""
+    default_fields = Attribute('A list of fields to include in the result.')
 
-    def get_member_id_as_string(member):
-        """Get string representation of ``member`` ID."""
+    id_as_string = Attribute('String representation of ``member`` ID.')
+
+    def fetch(id):
+        """Get the member by identified by ``id``; return `None` if such a
+        member doesn't exist."""
+
+    def update(id, data):
+        """Update member."""
+
+    def delete(id):
+        """Delete member."""

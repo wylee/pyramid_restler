@@ -264,7 +264,7 @@ class Test_RESTfulView(TestCase):
         self.assertRaises(HTTPBadRequest, view.get_member)
 
 
-class Test_add_restful_routes(TestCase):
+class Test_add_restful_views(TestCase):
 
     def _make_config(self, autocommit=True, add_view=None):
         config = Configurator(autocommit=autocommit)
@@ -285,12 +285,12 @@ class Test_add_restful_routes(TestCase):
 
     def test_directive_registration(self):
         config = self._make_config()
-        self.assertTrue(hasattr(config, 'add_restful_routes'))
+        self.assertTrue(hasattr(config, 'add_restful_views'))
 
-    def test_add_restful_routes(self):
+    def test_add_restful_views(self):
         config = self._make_config(add_view=self._make_add_view())
-        config.add_restful_routes('thing', _dummy_context_factory())
-        self.assertEqual(7, config.add_view.count())
+        config.add_restful_views()
+        self.assertEqual(5, config.add_view.count())
 
 
 class Test_POST_tunneling(TestCase):
