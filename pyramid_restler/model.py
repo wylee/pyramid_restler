@@ -117,8 +117,7 @@ class SQLAlchemyORMContext(object):
         return member
 
     def update_member(self, id, data):
-        q = self.session.query(self.entity)
-        member = q.get(id)
+        member = self.get_member(id)
         if member is None:
             return None
         for name in data:
@@ -127,8 +126,7 @@ class SQLAlchemyORMContext(object):
         return member
 
     def delete_member(self, id):
-        q = self.session.query(self.entity)
-        member = q.get(id)
+        member = self.get_member(id)
         if member is None:
             return None
         self.session.delete(member)
