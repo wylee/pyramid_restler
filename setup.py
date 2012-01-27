@@ -13,7 +13,7 @@ setup(
     keywords='Web REST Pylons Pyramid',
     url='https://bitbucket.org/wyatt/pyramid_restler',
     install_requires=(
-        'pyramid>=1.2.3',
+        'pyramid>=1.2.7',
     ),
     packages=find_packages(),
     classifiers=(
