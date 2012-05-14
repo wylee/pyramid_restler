@@ -15,6 +15,14 @@ setup(
     install_requires=(
         'pyramid>=1.3',
     ),
+    extras_require=dict(
+        dev=(
+            'coverage>=3.5.2',
+            'repoze.sphinx.autointerface>=0.6.2',
+            'Sphinx>=1.1.3',
+            'SQLAlchemy>=0.7.7',
+        ),
+    ),
     packages=find_packages(),
     classifiers=(
         'Development Status :: 3 - Alpha',
