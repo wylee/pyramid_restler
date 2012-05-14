@@ -21,6 +21,7 @@ setup(
             'repoze.sphinx.autointerface>=0.6.2',
             'Sphinx>=1.1.3',
             'SQLAlchemy>=0.7.7',
+            'waitress>=0.8.1',
         ),
     ),
     packages=find_packages(),

@@ -16,8 +16,6 @@ specifies the name of this database.
 """
 import os
 
-from paste.httpserver import serve
-
 from pyramid.config import Configurator
 
 from pyramid_restler.model import SQLAlchemyORMContext
@@ -58,7 +56,7 @@ def root_view(context, request):
     return dict(things=things, Thing=MyThing)
 
 
-def main(**settings):
+def main(global_config, **settings):
     create_and_populate_database()
     config = Configurator(settings=settings)
     config.add_route('root', '/')
@@ -78,10 +76,3 @@ def create_and_populate_database():
         MyThing(title='Three'),
     ])
     session.commit()
-
-
-if __name__ == '__main__':
-    settings = {'mako.directories': '.'}
-    app = main(**settings)
-    serve(app, host='0.0.0.0', port=5000)
-    os.remove(DB_NAME)
