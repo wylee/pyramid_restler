@@ -61,7 +61,6 @@ def main(global_config, **settings):
     config = Configurator(settings=settings)
     config.add_route('root', '/')
     config.add_view(route_name='root', view=root_view, renderer='example.mako')
-    config.include('pyramid_restler')
     config.add_restful_routes('thing', MyThingContextFactory)
     config.enable_POST_tunneling()
     return config.make_wsgi_app()
