@@ -4,14 +4,12 @@ from pyramid.decorator import reify
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
 from pyramid.response import Response
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from pyramid_restler.interfaces import IView
 
-
+@implementer(IView)
 class RESTfulView(object):
-
-    implements(IView)
 
     def __init__(self, context, request):
         self.context = context
