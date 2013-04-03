@@ -1,7 +1,7 @@
-0.1a4 (unreleased)
+0.1a4 (2013-04-03)
 ------------------
 
-- Nothing changed yet.
+- Made Python 3 compatible (contributed by eduardosan)
 
 
 0.1a3 (2011-11-30)
