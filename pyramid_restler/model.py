@@ -8,7 +8,6 @@ from pyramid.decorator import reify
 from sqlalchemy.schema import Column
 from sqlalchemy.util import KeyedTuple as NamedTuple
 
-#from zope.interface import implements
 from zope.interface import implementer
 
 from pyramid_restler.interfaces import IContext
@@ -33,8 +32,6 @@ class DefaultJSONEncoder(json.JSONEncoder):
 class SQLAlchemyORMContext(object):
     """Adapts a SQLAlchemy ORM class to the
     :class:`pyramid_restler.interfaces.IContext` interface."""
-
-    #implements(IContext)
 
     json_encoder = DefaultJSONEncoder
 
