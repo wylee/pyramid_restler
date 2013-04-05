@@ -143,7 +143,7 @@ class SQLAlchemyORMContext(object):
 
     def get_member_id_as_string(self, member):
         id = self.get_member_id(member)
-        if isinstance(id, basestring):
+        if isinstance(id, str):
             return id
         else:
             return json.dumps(id, cls=self.json_encoder)
