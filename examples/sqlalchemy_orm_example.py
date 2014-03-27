@@ -2,16 +2,16 @@
 SQLAlchemy ORM Example
 ======================
 
-To run this example, first install pyramid_restler and SQLAlchemy (perhaps
-in a virtualenv). Once that's done, cd into the examples/ directory, run
-`python sqlalchemy_orm_example.py`, and open http://localhost:5000/ in
-your browser. From there, you can play around with CRUD from a very simple
-UI.
+To run this example, first install pyramid_restler, waitress, and
+SQLAlchemy (preferably in a virtualenv). Once that's done, change into
+the examples/ directory, run `pserve --app-name sqlalchemy_orm
+example.ini`, and then open http://localhost:5000/ in your browser. From
+there, you can play around with CRUD from a very simple UI.
 
-Note: a temporary SQLite database is created in the current working
-directory every time this module is run; it is removed automatically when
-the server is shut down normally (e.g., via Ctrl-C). The `DB_NAME` global
-specifies the name of this database.
+Note: a temporary SQLite database named pyramid_reslter_example.db will
+be created in the examples/ directory the first time this example is
+run. On subsequent runs, if this database already exists, all of its
+tables will be dropped and recreated.
 
 """
 from pyramid.config import Configurator
