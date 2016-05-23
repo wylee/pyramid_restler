@@ -8,10 +8,10 @@ setup(
     name='pyramid_restler',
     version=version,
     description='RESTful views for Pyramid',
-    author='Wyatt Lee Baldwin',
+    author='Wyatt Baldwin',
     author_email='wyatt.lee.baldwin@gmail.com',
     keywords='Web REST Pylons Pyramid',
-    url='https://bitbucket.org/wyatt/pyramid_restler',
+    url='https://github.com/wylee/pyramid_restler',
     install_requires=(
         'pyramid>=1.3',
     ),
@@ -28,10 +28,12 @@ setup(
     packages=find_packages(),
     classifiers=(
         'Development Status :: 3 - Alpha',
-        'Framework :: Pylons',
+        'Framework :: Pyramid',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
     ),
 )
