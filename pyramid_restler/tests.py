@@ -20,7 +20,7 @@ else:
     from sqlalchemy.schema import Column
     from sqlalchemy.types import Integer, String
 
-from zope.interface import implements
+from zope.interface import implementer
 
 from pyramid_restler.interfaces import IContext
 from pyramid_restler.model import SQLAlchemyORMContext
@@ -364,9 +364,9 @@ class Test_POST_tunneling(TestCase):
 
 def _dummy_context_factory():
 
-    class Context(object):
 
-        implements(IContext)
+    @implementer(IContext)
+    class Context(object):
 
         _collection = [
             {'id': 1, 'val': 'one'},
