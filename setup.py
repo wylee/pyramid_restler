@@ -17,12 +17,12 @@ setup(
     ),
     extras_require=dict(
         dev=(
-            'coverage>=3.5.2',
-            'repoze.sphinx.autointerface>=0.6.2',
-            'Sphinx>=1.1.3',
-            'SQLAlchemy>=0.8.0',
-            'psycopg2>=2.4.6',
-            'waitress>=0.8.1',
+            'coverage>=4.1',
+            'repoze.sphinx.autointerface>=0.8',
+            'Sphinx>=1.4.1',
+            'SQLAlchemy>=1.0.13',
+            'psycopg2>=2.6.1',
+            'waitress>=0.9.0',
         ),
     ),
     packages=find_packages(),
