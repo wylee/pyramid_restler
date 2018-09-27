@@ -1,39 +1,48 @@
+import sys
 from setuptools import setup, find_packages
 
 
-version = open('version.txt').read().strip()
+with open('pyramid_restler/__init__.py') as fp:
+    for line in fp:
+        if line.startswith('__version__'):
+            version = line.split('=', 1)[1].strip()[1:-1]
 
+install_requires = [
+    'pyramid',
+]
+
+if sys.version_info < (3, 7):
+    install_requires.append('dataclasses')
 
 setup(
     name='pyramid_restler',
     version=version,
-    description='RESTful views for Pyramid',
+    description='RESTful views & resources for Pyramid',
     author='Wyatt Baldwin',
-    author_email='wyatt.lee.baldwin@gmail.com',
-    keywords='Web REST Pylons Pyramid',
-    url='https://github.com/wylee/pyramid_restler',
-    install_requires=(
-        'pyramid>=1.3',
-    ),
+    author_email='self@wyattbaldwin.com',
+    keywords='Web REST resource Pylons Pyramid',
+    url='https://gitlab.com/wylee/pyramid_restler',
+    install_requires=install_requires,
     extras_require=dict(
-        dev=(
-            'coverage>=4.1',
-            'repoze.sphinx.autointerface>=0.8',
-            'Sphinx>=1.4.1',
-            'SQLAlchemy>=1.0.13',
-            'psycopg2>=2.6.1',
-            'waitress>=0.9.0',
-        ),
+        dev=[
+            'coverage',
+            'flake8',
+            'psycopg2-binary',
+            'repoze.sphinx.autointerface',
+            'Sphinx',
+            'SQLAlchemy',
+            'tox',
+            'waitress',
+        ],
     ),
     packages=find_packages(),
-    classifiers=(
+    classifiers=[
         'Development Status :: 3 - Alpha',
         'Framework :: Pyramid',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-    ),
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+    ],
 )

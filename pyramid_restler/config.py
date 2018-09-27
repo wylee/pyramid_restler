@@ -1,77 +1,114 @@
+import posixpath
+from contextlib import contextmanager
+from inspect import isfunction
+
 from pyramid.events import NewRequest
 from pyramid.httpexceptions import HTTPBadRequest
 
-from pyramid_restler.view import RESTfulView
+from .view import ResourceView
 
 
-def add_restful_routes(self, name, factory, view=RESTfulView,
-                       route_kw=None, view_kw=None):
-    """Add a set of RESTful routes for an entity.
+@contextmanager
+def add_resources(self, base_route_pattern, **common_kwargs):
+    """Add multiple resources at base path/pattern."""
 
-    URL patterns for an entity are mapped to a set of views encapsulated in
-    a view class. The view class interacts with the model through a context
-    adapter that knows the particulars of that model.
+    def add(route_name, route_pattern, resource_factory, **kwargs):
+        if not route_pattern.startswith('/'):
+            route_pattern = posixpath.join(base_route_pattern, route_pattern)
+        kwargs = {**common_kwargs, **kwargs}
+        self.add_resource(route_name, route_pattern, resource_factory, **kwargs)
 
-    To use this directive in your application, first call
-    `config.include('pyramid_restler')` somewhere in your application's
-    `main` function, then call `config.add_restful_routes(...)`.
+    yield add
 
-    ``name`` is used as the base name for all route names and patterns. In
-    route names, it will be used as-is. In route patterns, underscores will
-    be converted to dashes.
 
-    ``factory`` is the model adapter that the view interacts with. It can be
-    any class that implements the :class:`pyramid_restler.interfaces.IContext`
-    interface.
+def add_resource(self,
+                 route_name,
+                 route_pattern,
+                 resource_factory,
+                 view=ResourceView,
+                 allowed_methods=None,
+                 renderer=None,
+                 route_args=None,
+                 view_args=None,
+                 debug=False):
+    """Add route and views for resource."""
+    resource_factory = self.maybe_dotted(resource_factory)
+    view = self.maybe_dotted(view)
+    route_args = route_args or {}
+    view_args = view_args or {}
+    resource_methods = []
 
-    ``view`` must be a view class that implements the
-    :class:`pyramid_restler.interfaces.IView` interface.
+    if renderer is not None:
+        view_args['renderer'] = renderer
 
-    Additional route and view keyword args can be passed directly through to
-    all `add_route` and `add_view` calls. Pass ``route_kw`` and/or ``view_kw``
-    as dictionaries to do so.
+    for name in dir(view):
+        attr = getattr(view, name)
+        if isfunction(attr) and getattr(attr, 'resource_method_config', None):
+            resource_methods.append((name, attr.resource_method_config))
 
-    """
-    route_kw = {} if route_kw is None else route_kw
-    view_kw = {} if view_kw is None else view_kw
-    view_kw.setdefault('http_cache', 0)
+    if allowed_methods is None:
+        # When no route level allowed methods are specified, use the
+        # available methods from the resource class.
+        allowed_methods = []
+        for name, resource_method_config in resource_methods:
+            attr = getattr(resource_factory, name, None)
+            if isfunction(attr):
+                allowed_methods.extend(resource_method_config.allowed_methods)
+        allowed_methods = tuple(allowed_methods) or None
 
-    subs = dict(
-        name=name,
-        slug=name.replace('_', '-'),
-        id='{id}',
-        renderer='{renderer}')
+    # Add primary route for resource.
+    self.add_route(
+        route_name,
+        route_pattern,
+        factory=resource_factory,
+        request_method=allowed_methods,
+        **route_args)
 
-    def add_route(name, pattern, attr, method):
-        name = name.format(**subs)
-        pattern = pattern.format(**subs)
-        self.add_route(
-            name, pattern, factory=factory,
-            request_method=method, **route_kw)
-        self.add_view(
-            view=view, attr=attr, route_name=name,
-            request_method=method, **view_kw)
+    if debug:
+        print(
+            f'config.add_route(\n'
+            f'    {route_name!r},\n'
+            f'    {route_pattern!r},\n'
+            f'    factory={view.__module__}.{resource_factory.__qualname__},\n'
+            f'    request_method={allowed_methods!r}\n'
+            f')'
+        )
 
-    # Get collection
-    add_route(
-        'get_{name}_collection_rendered', '/{slug}.{renderer}',
-        'get_collection', 'GET')
-    add_route(
-        'get_{name}_collection', '/{slug}', 'get_collection', 'GET')
+    # Keep track of request methods used for view methods associated
+    # with the primary route.
+    used_methods = set()
 
-    # Get member
-    add_route(
-        'get_{name}_rendered', '/{slug}/{id}.{renderer}', 'get_member', 'GET')
-    add_route('get_{name}', '/{slug}/{id}', 'get_member', 'GET')
+    for name, resource_method_config in resource_methods:
+        request_method = resource_method_config.allowed_methods
+        reused_methods = used_methods.intersection(request_method)
 
-    # Create member
-    add_route('create_{name}', '/{slug}', 'create_member', 'POST')
+        if reused_methods:
+            reused_methods = ', '.join(sorted(reused_methods))
+            raise ValueError(f'Request method(s) already used in {view}: {reused_methods}')
 
-    # Update member
-    add_route('update_{name}', '/{slug}/{id}', 'update_member', 'PUT')
+        used_methods.update(request_method)
 
-    # Delete member
-    add_route('delete_{name}', '/{slug}/{id}', 'delete_member', 'DELETE')
+        if allowed_methods:
+            request_method = tuple(m for m in request_method if m in allowed_methods)
+
+        if request_method:
+            current_view_args = {**view_args, **resource_method_config.view_args}
+            self.add_view(
+                view,
+                attr=name,
+                route_name=route_name,
+                request_method=request_method,
+                **current_view_args)
+
+            if debug:
+                print(
+                    f'config.add_view(\n'
+                    f'    {view.__module__}.{view.__qualname__},\n'
+                    f'    attr={name!r},\n'
+                    f'    route_name={route_name!r},\n'
+                    f'    request_method={request_method!r}\n'
+                    f')'
+                )
 
 
 def enable_POST_tunneling(self, allowed_methods=('PUT', 'DELETE')):
@@ -95,10 +132,9 @@ def enable_POST_tunneling(self, allowed_methods=('PUT', 'DELETE')):
     """
     param_name = '$method'
     header_name = 'X-HTTP-Method-Override'
-    allowed_methods = set(allowed_methods)
-    disallowed_message = (
-        'Only these methods may be tunneled over POST: {0}.'
-        .format(sorted(list(allowed_methods))))
+    allowed_methods = sorted(set(allowed_methods))
+    disallowed_message = f'Only these methods may be tunneled over POST: {allowed_methods}.'
+
     def new_request_subscriber(event):
         request = event.request
         if request.method == 'POST':
@@ -117,4 +153,5 @@ def enable_POST_tunneling(self, allowed_methods=('PUT', 'DELETE')):
                 request.method = method
             else:
                 raise HTTPBadRequest(disallowed_message)
+
     self.add_subscriber(new_request_subscriber, NewRequest)

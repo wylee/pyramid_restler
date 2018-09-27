@@ -1,103 +1,86 @@
-import json
+from inspect import isfunction
+from dataclasses import dataclass, field
+from typing import Union
 
-from pyramid.decorator import reify
-from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
 from pyramid.response import Response
 
 from zope.interface import implementer
 
-from pyramid_restler.interfaces import IView
+from pyramid_restler.interfaces import IResourceView
 
-@implementer(IView)
-class RESTfulView(object):
+
+__all__ = ['resource_method', 'ResourceView']
+
+
+@dataclass
+class ResourceMethodConfig:
+
+    allowed_methods: Union[str, tuple] = None
+    view_args: dict = field(default_factory=dict)
+
+
+def resource_method(arg, **view_args):
+    if isfunction(arg):
+        view_method = arg
+        allowed_methods = (view_method.__name__.upper(),)
+        view_method.resource_method_config = ResourceMethodConfig(allowed_methods)
+        return view_method
+
+    allowed_methods = arg
+    if isinstance(allowed_methods, str):
+        allowed_methods = (allowed_methods,)
+    allowed_methods = tuple(method.upper() for method in allowed_methods)
+
+    def wrapper(view_method):
+        view_method.resource_method_config = ResourceMethodConfig(
+            allowed_methods, view_args=view_args)
+        return view_method
+
+    return wrapper
+
+
+@implementer(IResourceView)
+class ResourceView:
 
     def __init__(self, context, request):
         self.context = context
         self.request = request
 
-    def get_collection(self):
-        kwargs = self.request.params.get('$$', {})
-        if kwargs:
-            kwargs = json.loads(kwargs)
-        collection = self.context.get_collection(**kwargs)
-        return self.render_to_response(collection)
+    @resource_method
+    def get(self):
+        result = self.context.get()
+        return self._get_standard_response(result)
 
-    def get_member(self):
-        id = self.request.matchdict['id']
-        member = self.context.get_member(id)
-        return self.render_to_response(member)
+    @resource_method
+    def delete(self):
+        result = self.context.delete()
+        return self._get_standard_response(result)
 
-    def _get_data(self):
-        content_type = self.request.content_type
-        if content_type == 'application/json':
-            data = json.loads(self.request.body)
-        elif content_type == 'application/x-www-form-urlencoded':
-            data = dict(self.request.POST)
-        return data
+    @resource_method
+    def patch(self):
+        result = self.context.patch()
+        return self._get_standard_response(result)
 
-    def create_member(self):
-        member = self.context.create_member(self._get_data())
-        id = self.context.get_member_id_as_string(member)
-        headers = {'Location': '/'.join((self.request.path, id))}
-        return Response(status=201, headers=headers)
+    @resource_method
+    def post(self):
+        result = self.context.post()
+        return self._get_standard_response(result)
 
-    def update_member(self):
-        id = self.request.matchdict['id']
-        member = self.context.update_member(id, self._get_data())
-        if member is None:
-            member = self.context.create_member(self._get_data())
-            headers = {'Location': self.request.path}
-            return Response(status=201, headers=headers)
-        else:
-            return Response(status=204, content_type='')
+    @resource_method
+    def put(self):
+        result = self.context.put()
+        return self._get_standard_response(result)
 
-    def delete_member(self):
-        id = self.request.matchdict['id']
-        member = self.context.delete_member(id)
-        if member is None:
-            raise HTTPNotFound(self.context)
-        return Response(status=204, content_type='')
-
-    def render_to_response(self, value, fields=None):
-        if value is None:
-            raise HTTPNotFound(self.context)
-        renderer = self.determine_renderer()
-        try:
-            renderer = getattr(self, 'render_{0}'.format(renderer))
-        except AttributeError:
-            name = self.__class__.__name__
-            raise HTTPBadRequest(
-                '{0} view has no renderer "{1}".'.format(name, renderer))
-        return Response(**renderer(value))
-
-    def determine_renderer(self):
-        request = self.request
-        renderer = (request.matchdict or {}).get('renderer', '').lstrip('.')
-        if renderer:
-            return renderer
-        if request.accept.best_match(['application/json']):
-            return 'json'
-        elif request.accept.best_match(['application/xml']):
-            return 'xml'
-
-    def render_json(self, value):
-        response_data = dict(
-            body=self.context.to_json(value, self.fields, self.wrap),
-            content_type='application/json',
-        )
-        return response_data
-
-    def render_xml(self, value):
-        raise HTTPBadRequest('XML renderer not implemented.')
-
-    @reify
-    def fields(self):
-        fields = self.request.params.get('$fields', None)
-        if fields is not None:
-            fields = json.loads(fields)
-        return fields
-
-    @reify
-    def wrap(self):
-        wrap = self.request.params.get('$wrap', 'true').strip().lower()
-        return wrap in ('1', 'true')
+    def _get_standard_response(self, result):
+        if result is not None:
+            context = self.context
+            # Content
+            try:
+                converter = context.configuration.converter
+            except AttributeError:
+                pass
+            else:
+                result = converter(result)
+            return result
+        # No content
+        return Response(204)

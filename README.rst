@@ -10,6 +10,8 @@ examples.
 See http://packages.python.org/pyramid_restler/ for detailed documentation
 of interfaces, APIs, and usage.
 
+.. note:: Version 2 runs on Python 3.7+ only.
+
 License
 -------
 

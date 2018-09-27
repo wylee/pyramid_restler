@@ -7,7 +7,7 @@ from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
 from pyramid.response import Response
 from pyramid.testing import DummyRequest
 
-from webob.request import MIMEAccept
+from webob.acceptparse import create_accept_header
 
 try:
     import sqlalchemy
@@ -22,249 +22,217 @@ else:
 
 from zope.interface import implementer
 
-from pyramid_restler.interfaces import IContext
-from pyramid_restler.model import SQLAlchemyORMContext
-from pyramid_restler.view import RESTfulView
+from pyramid_restler.interfaces import IResource
+from pyramid_restler.sqlalchemy import (
+    configure, SQLAlchemyORMContainerResource, SQLAlchemyORMItemResource)
+from pyramid_restler.view import ResourceView
 
 
-class Test_SQLAlchemyORMContext(TestCase):
+class DummyRequest(DummyRequest):
+
+    @property
+    def json_body(self):
+        return json.loads(self.body, encoding=self.charset)
+
+
+Base = declarative_base()
+
+
+class Model(Base):
+
+    __tablename__ = 'entity'
+
+    id = Column(Integer, primary_key=True)
+    value = Column(String, nullable=False)
+
+
+ContainerResource = configure(SQLAlchemyORMContainerResource, model=Model, name='items', item_name='item')
+ItemResource = configure(SQLAlchemyORMItemResource, model=Model, name='item')
+
+
+class TestBase(TestCase):
 
     def setUp(self):
         # For each test, create a new database and populate it with a few
-        # things. Then create a context instance to be used by the test.
+        # things. Then create a resource instance to be used by the test.
         engine = create_engine('sqlite://')
         session = Session(bind=engine)
-        Base = declarative_base()
-        class Entity(Base):
-            __tablename__ = 'entity'
-            id = Column(Integer, primary_key=True)
-            value = Column(String)
         Base.metadata.create_all(bind=engine)
         session.add_all([
-            Entity(id=1, value='one'),
-            Entity(id=2, value='two'),
-            Entity(id=3, value='three'),
+            Model(id=1, value='one'),
+            Model(id=2, value='two'),
+            Model(id=3, value='three'),
         ])
         session.commit()
-        class ContextFactory(SQLAlchemyORMContext):
-            entity = Entity
-        request = DummyRequest()
-        request.db_session = session
-        self.context = ContextFactory(request)
+        self.session = session
+
+    def tearDown(self):
+        self.session.query(Model).delete()
+        self.session.commit()
+
+    def make_request(self, json_body=None, **kwargs):
+        if json_body:
+            kwargs['body'] = json.dumps(json_body)
+        request = DummyRequest(dbsession=self.session, **kwargs)
+        return request
+
+    def make_container_resource(self, **request_kwargs):
+        request = self.make_request(**request_kwargs)
+        container = ContainerResource(request)
+        return container
+
+    def make_item_resource(self, **request_kwargs):
+        request = self.make_request(**request_kwargs)
+        container = ItemResource(request)
+        return container
+
+
+class TestSQLAlchemyORMResources(TestBase):
 
     def test_interface(self):
-        self.assertTrue(IContext.implementedBy(SQLAlchemyORMContext))
-        self.assertTrue(IContext.providedBy(self.context))
+        self.assertTrue(IResource.implementedBy(SQLAlchemyORMContainerResource))
+        self.assertTrue(IResource.implementedBy(SQLAlchemyORMItemResource))
+        self.assertTrue(IResource.providedBy(ContainerResource(DummyRequest())))
+        self.assertTrue(IResource.providedBy(ItemResource(DummyRequest(matchdict={'id': 1}))))
 
-    def test_get_collection(self):
-        collection = self.context.get_collection()
-        self.assertEqual(3, len(collection))
+    def test_get_from_container(self):
+        resource = self.make_container_resource()
+        items = resource.get()
+        self.assertEqual(3, len(items))
 
-    def test_get_collection_with_kwargs(self):
-        collection = self.context.get_collection(filters={'value': 'three'})
-        self.assertEqual(1, len(collection))
-        self.assertEqual(collection[0].value, 'three')
+    def test_get_item(self):
+        resource = self.make_item_resource(matchdict={'id': 1})
+        item = resource.get()
+        self.assertEqual(item.id, 1)
+        self.assertEqual(item.value, 'one')
 
-    def test_get_member(self):
-        member = self.context.get_member(1)
-        self.assertEqual(member.id, 1)
-        self.assertEqual(member.value, 'one')
+    def test_get_nonexistent_item(self):
+        resource = self.make_item_resource(matchdict={'id': 42})
+        self.assertRaises(HTTPNotFound, resource.get)
 
-    def test_get_nonexistent_member(self):
-        member = self.context.get_member(42)
-        self.assert_(member is None)
+    def test_create_item(self):
+        resource = self.make_container_resource(
+            method='POST', content_type='application/x-www-form-urlencoded', post={'value': 4})
+        item = resource.post()
+        retrieved_item = self.session.query(Model).get(item.id)
+        self.assertEqual(retrieved_item, item)
 
-    def test_create_member(self):
-        member = self.context.create_member(dict(value='four'))
-        member = self.context.session.query(self.context.entity).get(member.id)
-        self.assertEqual(member, member)
+    def test_create_item_json(self):
+        resource = self.make_container_resource(
+            method='POST', content_type='application/json', json_body={'value': 4})
+        item = resource.post()
+        retrieved_item = self.session.query(Model).get(item.id)
+        self.assertEqual(retrieved_item, item)
 
-    def test_update_member(self):
-        self.context.update_member(1, dict(value='ONE'))
-        member = self.context.get_member(1)
-        self.assertEqual('ONE', member.value)
+    def test_update_item(self):
+        item = self.session.query(Model).get(1)
+        self.assertEqual('one', item.value)
+        resource = self.make_item_resource(
+            method='PATCH',
+            content_type='application/json',
+            json_body={'value': 'ONE'},
+            matchdict={'id': 1},
+        )
+        item = resource.patch()
+        self.assertEqual('ONE', item.value)
 
-    def test_update_nonexistent_member(self):
-        self.context.update_member(42, dict(value='Forty-two'))
-        member = self.context.get_member(42)
-        self.assert_(member is None)
+    def test_update_nonexistent_item(self):
+        resource = self.make_item_resource(
+            method='PATCH',
+            content_type='application/json',
+            json_body={'value': 'FORTY-TWO'},
+            matchdict={'id': 42},
+        )
+        self.assertRaises(HTTPNotFound, resource.patch)
 
-    def test_delete_member(self):
-        member = self.context.get_member(1)
-        self.assert_(member is not None)
-        self.context.delete_member(1)
-        member = self.context.get_member(1)
-        self.assert_(member is None)
+    def test_delete_item(self):
+        item = self.session.query(Model).get(1)
+        self.assertIsNotNone(item)
 
-    def test_collection_to_json(self):
-        collection = self.context.get_collection()
-        json_collection = self.context.to_json(collection)
-        self.assertTrue(isinstance(json_collection, basestring))
-        should_equal = [
-            {'id': 1, 'value': 'one'},
-            {'id': 2, 'value': 'two'},
-            {'id': 3, 'value': 'three'},
-        ]
-        self.assertEqual(json.loads(json_collection)['results'], should_equal)
+        resource = self.make_item_resource(method='DELETE',  matchdict={'id': 1})
+        resource.delete()
 
-    def test_member_to_json(self):
-        member = self.context.get_member(1)
-        json_member = self.context.to_json(member)
-        self.assertTrue(isinstance(json_member, basestring))
-        should_equal = [{'id': 1, 'value': 'one'}]
-        self.assertEqual(json.loads(json_member)['results'], should_equal)
-
-    def test_get_member_id_as_string(self):
-        member = self.context.get_member(1)
-        id = self.context.get_member_id_as_string(member)
-        self.assertEqual(id, '1')
+        item = self.session.query(Model).get(1)
+        self.assertIsNone(item)
 
 
-class Test_RESTfulView(TestCase):
+class TestResourceView(TestBase):
 
-    def test_get_collection(self):
-        request = DummyRequest(path='/thing.json')
-        request.matchdict = {'renderer': 'json'}
-        view = RESTfulView(_dummy_context_factory(), request)
-        response = view.get_collection()
-        self.assertTrue(isinstance(response, Response))
+    def test_get_items(self):
+        request = self.make_request(path='/thing')
+        view = ResourceView(ContainerResource(request), request)
+        result = view.get()
+        self.assertEqual(request.response.status_code, 200)
+        self.assertEqual(result, {
+            'items': [
+                {'id': 1, 'value': 'one'},
+                {'id': 2, 'value': 'two'},
+                {'id': 3, 'value': 'three'},
+            ]
+        })
 
-    def test_get_collection_with_kwargs(self):
-        context = _dummy_context_factory()
-        request = DummyRequest(
-            path='/thing.json',
-            params={'$$': '{"filters":{"val":"three"}}'})
-        request.matchdict = {'renderer': 'json'}
-        view = RESTfulView(context, request)
-        response = view.get_collection()
-        results = json.loads(response.body)['results']
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0]['val'], 'three')
+    def test_get_item(self):
+        request = self.make_request(path='/thing/1.json', matchdict={'id': 1})
+        view = ResourceView(ItemResource(request), request)
+        result = view.get()
+        self.assertEqual(request.response.status_code, 200)
+        self.assertEqual(result, {'item': {'id': 1, 'value': 'one'}})
 
-    def test_get_member(self):
-        request = DummyRequest(path='/thing/1.json')
-        request.matchdict = {'id': 1, 'renderer': 'json'}
-        view = RESTfulView(_dummy_context_factory(), request)
-        response = view.get_member()
-        self.assertTrue(isinstance(response, Response))
-        self.assertEqual(response.status_int, 200)
+    def test_get_nonexistent_item(self):
+        request = self.make_request(path='/thing/42.json', matchdict={'id': 42})
+        view = ResourceView(ItemResource(request), request)
+        self.assertRaises(HTTPNotFound, view.get)
 
-    def test_create_member(self):
-        context = _dummy_context_factory()
-        request = DummyRequest(
-            path='/thing', post={'val': 'four'},
+    def test_post_item(self):
+        request = self.make_request(
+            method='POST', path='/thing', content_type='application/x-www-form-urlencoded',
+            post={'value': 'four'})
+        view = ResourceView(ContainerResource(request), request)
+        result = view.post()
+        self.assertEqual(result['item'], {'id': 4, 'value': 'four'})
+
+    def test_post_item_from_json(self):
+        request = self.make_request(
+            method='POST', path='/thing', content_type='application/json',
+            json_body={'value': 'four'})
+        view = ResourceView(ContainerResource(request), request)
+        result = view.post()
+        self.assertEqual(request.response.status_code, 200)
+        self.assertEqual(result['item'], {'id': 4, 'value': 'four'})
+
+    def test_put_item(self):
+        request = self.make_request(
+            method='PUT', path='/thing/1', matchdict={'id': 1}, post={'value': 'ONE'},
             content_type='application/x-www-form-urlencoded')
-        view = RESTfulView(context, request)
-        response = view.create_member()
-        self.assert_(context.get_member(4) is not None)
-        self.assertTrue(isinstance(response, Response))
-        self.assertEqual(response.status_int, 201)
+        view = ResourceView(ItemResource(request), request)
+        result = view.put()
+        self.assertEqual(request.response.status_code, 200)
+        self.assertEqual(result['item'], {'id': 1, 'value': 'ONE'})
 
-    def test_create_member_from_json(self):
-        context = _dummy_context_factory()
-        request = DummyRequest(
-            path='/thing', body='{"val": "four"}',
-            content_type='application/json')
-        view = RESTfulView(context, request)
-        response = view.create_member()
-        self.assertEqual(response.status_int, 201)
-        self.assert_(context.get_member(4) is not None)
-
-    def test_update_member(self):
-        request = DummyRequest(
-            method='PUT', path='/thing/1', post={'val': 'ONE'},
+    def test_put_new_item(self):
+        request = self.make_request(
+            method='PUT', path='/thing/42', matchdict={'id': 42}, post={'id': 42, 'value': '42'},
             content_type='application/x-www-form-urlencoded')
-        request.matchdict = {'id': 1}
-        view = RESTfulView(_dummy_context_factory(), request)
-        response = view.update_member()
-        self.assertTrue(isinstance(response, Response))
-        self.assertEqual(response.status_int, 204)
+        view = ResourceView(ItemResource(request), request)
+        result = view.put()
+        self.assertEqual(request.response.status_code, 200)
+        self.assertEqual(result['item'], {'id': 42, 'value': '42'})
 
-    def test_update_nonexistent_member(self):
-        request = DummyRequest(
-            method='PUT', path='/thing/42', post={'val': 'Forty-two'},
-            content_type='application/x-www-form-urlencoded')
-        request.matchdict = {'id': 42}
-        view = RESTfulView(_dummy_context_factory(), request)
-        response = view.update_member()
-        self.assertEqual(response.status_int, 201)
-        self.assert_('Location' in response.headers)
-        self.assertEqual(response.headers['Location'], '/thing/42')
+    def test_delete_item(self):
+        request = self.make_request(method='DELETE', path='/thing/1', matchdict={'id': 1})
+        view = ResourceView(ItemResource(request), request)
+        result = view.delete()
+        self.assertEqual(request.response.status_code, 200)
+        self.assertEqual(result['item'], {'id': 1, 'value': 'one'})
 
-    def test_delete_member(self):
-        request = DummyRequest(method='DELETE', path='/thing/1',)
-        request.matchdict = {'id': 1, 'renderer': 'json'}
-        view = RESTfulView(_dummy_context_factory(), request)
-        response = view.delete_member()
-        self.assertTrue(isinstance(response, Response))
-        self.assertEqual(response.status_int, 204)
-        self.assertRaises(HTTPNotFound, view.get_member)
-
-    def test_delete_nonexistent_member(self):
-        request = DummyRequest(method='DELETE', path='/thing/does_not_exist',)
-        request.matchdict = {'id': 'does_not_exist', 'renderer': 'json'}
-        view = RESTfulView(_dummy_context_factory(), request)
-        self.assertRaises(HTTPNotFound, view.delete_member)
-
-    def test_get_nonexistent_member_should_raise_404(self):
-        request = DummyRequest(path='/thing/42.json')
-        request.matchdict = {'id': 42, 'renderer': 'json'}
-        view = RESTfulView(_dummy_context_factory(), request)
-        self.assertRaises(HTTPNotFound, view.get_member)
-
-    def test_get_member_specific_fields(self):
-        request = DummyRequest(path='/thing/1.json', params={'$fields': '["id"]'})
-        request.matchdict = {'id': 1, 'renderer': 'json'}
-        view = RESTfulView(_dummy_context_factory(), request)
-        response = view.get_member()
-        member = json.loads(response.body)['results'][0]
-        self.assert_(member.keys() == ['id'])
-
-    def test_wrapped_response(self):
-        request = DummyRequest(path='/thing/1.json', params={'$wrap': 'true'})
-        request.matchdict = {'id': 1, 'renderer': 'json'}
-        view = RESTfulView(_dummy_context_factory(), request)
-        self.assertTrue(view.wrap)
-        response = view.get_member()
-        content = json.loads(response.body)
-        self.assert_('results' in content)
-        member = content['results'][0]
-        self.assert_('id' in member and 'val' in member)
-
-    def test_unwrapped_response(self):
-        request = DummyRequest(path='/thing/1.json', params={'$wrap': 'false'})
-        request.matchdict = {'id': 1, 'renderer': 'json'}
-        view = RESTfulView(_dummy_context_factory(), request)
-        self.assertFalse(view.wrap)
-        response = view.get_member()
-        member = json.loads(response.body)[0]
-        self.assert_('id' in member and 'val' in member)
-
-    def test_accept_application_json(self):
-        request = DummyRequest(path='/thing/1')
-        request.accept = MIMEAccept('application/json')
-        request.matchdict = {'id': 1}
-        view = RESTfulView(_dummy_context_factory(), request)
-        response = view.get_member()
-        self.assertEqual(response.content_type, 'application/json')
-        member = json.loads(response.body)['results'][0]
-        self.assertEqual(member['id'], 1)
-
-    def test_xml_renderer(self):
-        request = DummyRequest(path='/thing/1')
-        request.accept = MIMEAccept('application/xml')
-        request.matchdict = {'id': 1}
-        view = RESTfulView(_dummy_context_factory(), request)
-        self.assertRaises(HTTPBadRequest, view.get_member)
-
-    def test_unknown_renderer_should_raise_400(self):
-        request = DummyRequest(path='/thing/1.xyz')
-        request.matchdict = {'id': 1, 'renderer': 'xyz'}
-        view = RESTfulView(_dummy_context_factory(), request)
-        self.assertRaises(HTTPBadRequest, view.get_member)
+    def test_delete_nonexistent_item(self):
+        request = self.make_request(
+            method='DELETE', path='/thing/42', matchdict={'id': 42})
+        view = ResourceView(ItemResource(request), request)
+        self.assertRaises(HTTPNotFound, view.delete)
 
 
-class Test_add_restful_routes(TestCase):
+class TestAddResource(TestCase):
 
     def _make_config(self, autocommit=True, add_view=None):
         config = Configurator(autocommit=autocommit)
@@ -277,23 +245,35 @@ class Test_add_restful_routes(TestCase):
         class AddView(object):
             def __init__(self):
                 self.views = []
-            def __call__(self, **kw):
-                self.views.append(kw)
+
+            def __call__(self, *args, **kwargs):
+                self.views.append((args, kwargs))
+
+            @property
             def count(self):
                 return len(self.views)
+
         return AddView()
 
     def test_directive_registration(self):
         config = self._make_config()
-        self.assertTrue(hasattr(config, 'add_restful_routes'))
+        self.assertTrue(hasattr(config, 'add_resource'))
+        self.assertTrue(hasattr(config, 'add_resources'))
+        self.assertTrue(hasattr(config, 'enable_POST_tunneling'))
 
-    def test_add_restful_routes(self):
+    def test_add_resource(self):
         config = self._make_config(add_view=self._make_add_view())
-        config.add_restful_routes('thing', _dummy_context_factory())
-        self.assertEqual(7, config.add_view.count())
+
+        # ContainerResource responds to only GET and POST
+        config.add_resource('things', '/things', ContainerResource)
+        self.assertEqual(2, config.add_view.count)
+
+        # ItemResource responds to GET, DELETE, PATCH, and PUT
+        config.add_resource('thing', '/thing', ItemResource)
+        self.assertEqual(6, config.add_view.count)
 
 
-class Test_POST_tunneling(TestCase):
+class TestPOSTTunneling(TestCase):
 
     def _make_app(self):
         config = Configurator()
@@ -305,19 +285,19 @@ class Test_POST_tunneling(TestCase):
         app = self._make_app()
         request = DummyRequest(method='POST')
         self.assertEqual('POST', request.method)
-        self.assert_('$method' not in request.params)
+        self.assertNotIn('$method', request.params)
         app.registry.notify(NewRequest(request))
         self.assertEqual('POST', request.method)
-        self.assert_('$method' not in request.params)
+        self.assertNotIn('$method', request.params)
 
     def _assert_before(self, request):
         self.assertEqual('POST', request.method)
 
     def _assert_after(self, request, method):
         self.assertEqual(request.method, method)
-        self.assert_('$method' not in request.GET)
-        self.assert_('$method' not in request.POST)
-        self.assert_('X-HTTP-Method-Override' not in request.headers)
+        self.assertNotIn('$method', request.GET)
+        self.assertNotIn('$method', request.POST)
+        self.assertNotIn('X-HTTP-Method-Override', request.headers)
 
     def test_PUT_using_GET_param(self):
         app = self._make_app()
@@ -362,17 +342,19 @@ class Test_POST_tunneling(TestCase):
         self.assertRaises(HTTPBadRequest, app.registry.notify, NewRequest(request))
 
 
-def _dummy_context_factory():
+def _dummy_resource_factory():
 
-
-    @implementer(IContext)
-    class Context(object):
+    @implementer(IResource)
+    class Resource:
 
         _collection = [
             {'id': 1, 'val': 'one'},
             {'id': 2, 'val': 'two'},
             {'id': 3, 'val': 'three'},
         ]
+
+        def __init__(self, request):
+            self.request = request
 
         def _get_member_by_id(self, id):
             for m in self._collection:
@@ -427,4 +409,4 @@ def _dummy_context_factory():
                 response = value
             return json.dumps(response)
 
-    return Context()
+    return Resource(DummyRequest())
