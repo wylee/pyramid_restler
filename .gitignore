@@ -1,1 +1,4 @@
-/examples/pyramid_restler_example.db
+/.mypy_cache/
+/examples/*.db
+/poetry.lock
+/src/*.egg-info/

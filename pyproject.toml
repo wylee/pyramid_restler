@@ -1,0 +1,54 @@
+[tool.poetry]
+name = "pyramid_restler"
+version = "2.0a1"
+description = "Resourceful routes & views for Pyramd"
+authors = ["Wyatt Baldwin <self@wyattbaldwin.com>"]
+readme = "README.rst"
+license = "MIT"
+homepage = "https://github.com/wylee/pyramid_restler"
+repository = "https://github.com/wylee/pyramid_restler"
+keywords = ["REST", "resource", "Pyramid", "SQLAlchemy", "Web"]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Pyramid",
+]
+
+packages = [
+    { include = "pyramid_restler", from = "src" }
+]
+
+include = [
+    "docs/*",
+    "examples/*.ini",
+    "examples/*.mako",
+    "examples/*.py",
+    "CHANGELOG.rst",
+    "LICENSE",
+    "README.rst",
+]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+pyramid = "*"
+dataclasses = { version = "*", python = "3.6" }
+
+[tool.poetry.dev-dependencies]
+black = { version = "*", allow-prereleases = true }
+coverage = "*"
+flake8 = "*"
+mypy = "*"
+psycopg2-binary = "*"
+pyramid_mako = "*"
+"repoze.sphinx.autointerface" = "*"
+runcommands = { version = "*", allow-prereleases = true }
+sphinx = "*"
+sqlalchemy = "*"
+tox = "*"
+
+[tool.black]
+target-version = ["py36"]
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

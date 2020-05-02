@@ -6,27 +6,24 @@ API
 Configuration
 -------------
 
-.. autofunction:: pyramid_restler.config.add_restful_routes
+.. autofunction:: pyramid_restler.config.add_resource
 
 .. autofunction:: pyramid_restler.config.enable_POST_tunneling
-
-Interfaces
-----------
-
-.. autointerface:: pyramid_restler.interfaces.IView
-   :members:
-
-.. autointerface:: pyramid_restler.interfaces.IContext
-   :members:
 
 View
 ----
 
-.. autoclass:: pyramid_restler.view.RESTfulView
+.. autoclass:: pyramid_restler.view.ResourceView
+   :members:
+
+.. autoclass:: pyramid_restler.view.ResourceMethodConfig
    :members:
 
 Model
 -----
 
-.. autoclass:: pyramid_restler.model.SQLAlchemyORMContext
+.. autoclass:: pyramid_restler.sqlalchemy.SQLAlchemyORMContainerResource
+   :members:
+
+.. autoclass:: pyramid_restler.sqlalchemy.SQLAlchemyORMItemResource
    :members:
