@@ -25,6 +25,10 @@ from pyramid_restler.view import ResourceView
 
 
 class DummyRequest(DummyRequest):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.registry.settings = {}
+
     @property
     def json_body(self):
         return json.loads(self.body)
@@ -124,8 +128,8 @@ class TestSQLAlchemyItemResource(TestBase):
         data = resource.get()
         self.assertIn("item", data)
         item = data["item"]
-        self.assertEqual(item.id, 1)
-        self.assertEqual(item.value, "one")
+        self.assertEqual(item["id"], 1)
+        self.assertEqual(item["value"], "one")
 
     def test_get_nonexistent(self):
         resource = self.make_resource(matchdict={"id": "42"})
@@ -172,7 +176,7 @@ class TestContainerResourceView(TestBase):
         self.assertIn("items", data)
         items = data["items"]
         for i, item in enumerate(items, 1):
-            self.assertEqual(item.id, i)
+            self.assertEqual(item["id"], i)
 
     def test_post(self):
         request = self.make_request(
@@ -213,8 +217,8 @@ class TestItemResourceView(TestBase):
         self.assertEqual(request.response.status_code, 200)
         self.assertIn("item", data)
         item = data["item"]
-        self.assertEqual(item.id, 1)
-        self.assertEqual(item.value, "one")
+        self.assertEqual(item["id"], 1)
+        self.assertEqual(item["value"], "one")
 
     def test_get_nonexistent(self):
         request = self.make_request(path="/thing/42.json", matchdict={"id": "42"})

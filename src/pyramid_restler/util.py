@@ -6,6 +6,29 @@ from pyramid.httpexceptions import exception_response
 NOT_SET = object()
 
 
+def as_bool(string: str) -> bool:
+    """Convert string to bool.
+
+    Only the values "1", "true", "0", and "false" are accepted.
+
+    """
+    string = string.lower()
+    if string in ("1", "true"):
+        return True
+    if string in ("0", "false"):
+        return False
+    raise ValueError('Expected value to be one of "1", "true", "0", or "false"')
+
+
+def as_list(string, sep=",", strip=True):
+    """Convert string to list, splitting on comma by default."""
+    string = string.strip()
+    items = string.split(sep)
+    if strip:
+        items = [item.strip() for item in items]
+    return items
+
+
 def camel_to_underscore(name):
     """Convert camel case name to underscore name."""
     name = re.sub(r"(?<!\b)(?<!_)([A-Z][a-z])", r"_\1", name)
@@ -75,6 +98,11 @@ def get_param(
                     400, f"Could not parse parameter {name} with {converter}: {v!r}",
                 )
         return v
+
+    if converter is bool:
+        converter = as_bool
+    elif converter is list:
+        converter = as_list
 
     if multi:
         values = params.getall(name)

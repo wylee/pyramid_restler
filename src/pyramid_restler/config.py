@@ -120,7 +120,7 @@ def add_resource(
     else:
         acl = getattr(resource_factory, "__acl__", None)
         if acl is None:
-            default_acl = get_setting(self, "default_acl")
+            default_acl = get_setting(self.get_settings(), "default_acl")
             if default_acl is not None:
                 log.debug(
                     f"Setting {resource_factory.__name__}.__acl__ "
@@ -135,7 +135,7 @@ def add_resource(
     if permission:
         view_args["permission"] = permission
 
-    resource_methods = get_setting(self, "resource_methods")
+    resource_methods = get_setting(self.get_settings(), "resource_methods")
     resource_methods = tuple(m.lower() for m in resource_methods)
 
     view_methods = []

@@ -1,9 +1,16 @@
-from . import config
+from . import config as config_module
 from .resource import Resource
 from .view import ResourceView, ResourceViewConfig
 
 
-def includeme(config_):
-    for name in config.__all__:
-        method = getattr(config, name)
-        config_.add_directive(name, method)
+__all__ = [
+    "Resource",
+    "ResourceView",
+    "ResourceViewConfig",
+]
+
+
+def includeme(config):
+    for name in config_module.__all__:
+        method = getattr(config_module, name)
+        config.add_directive(name, method)

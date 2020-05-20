@@ -1,5 +1,6 @@
-from typing import Dict
+from typing import Any, Callable, Dict, Type
 
+from pyramid.path import DottedNameResolver
 from pyramid.settings import asbool, aslist
 
 
@@ -15,12 +16,16 @@ DEFAULT_RESOURCE_METHODS = (
 
 DEFAULT_SETTINGS = {
     "default_acl": None,
+    "default_model_adapter": None,
+    "default_response_fields": None,
     "resource_methods": DEFAULT_RESOURCE_METHODS,
 }
 
 
-TYPES: Dict[str, type] = {
+TYPES: Dict[str, Type] = {
     "default_acl": object,
+    "default_model_adapter": Callable[..., Any],
+    "default_response_fields": Callable[..., Any],
     "resource_methods": list,
 }
 
@@ -28,7 +33,7 @@ TYPES: Dict[str, type] = {
 NOT_SET = object()
 
 
-def get_setting(config, name, default=NOT_SET):
+def get_setting(all_settings, name, default=NOT_SET):
     """Get pyramid_restler setting from config.
 
     If the setting wasn't set in the app, the passed ``default`` value
@@ -38,7 +43,6 @@ def get_setting(config, name, default=NOT_SET):
     """
     if name not in DEFAULT_SETTINGS:
         raise KeyError(f"Unknown pyramid_restler setting: {name}")
-    all_settings = config.get_settings()
     settings = all_settings.get("pyramid_restler", {})
     if name in settings:
         value = settings[name]
@@ -46,14 +50,18 @@ def get_setting(config, name, default=NOT_SET):
         value = DEFAULT_SETTINGS[name]
     else:
         value = default
-    type_ = TYPES[name]
-    if not isinstance(value, (type_,)):
+    if isinstance(value, str):
+        type_ = TYPES[name]
         if type_ is bool:
             converter = asbool
+        elif type_ is Callable[..., Any]:
+            resolver = DottedNameResolver()
+            converter = resolver.maybe_resolve
         elif type_ is list:
             converter = aslist
         elif type_ is object:
-            converter = config.maybe_dotted
+            resolver = DottedNameResolver()
+            converter = resolver.maybe_resolve
         elif type_ is str:
             converter = str
         value = converter(value)

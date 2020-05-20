@@ -1,12 +1,15 @@
 import json
 from math import ceil as ceiling
+from typing import Sequence
 
 from pyramid.httpexceptions import exception_response, HTTPNotFound
 
+from sqlalchemy import inspect
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import and_, or_
 
+from .settings import get_setting
 from .util import extract_data, get_param
 
 
@@ -23,6 +26,19 @@ class SQLAlchemyResource(Resource):
         raise NotImplementedError("model property must be implemented in subclasses")
 
     @property
+    def model_adapter(self):
+        """Adapter for ORM instances.
+
+        Can be any callable that takes an ORM instance and the current
+        request and returns a suitable object. Adaptation will happen
+        after items are fetched and before fields are extracted.
+
+        """
+        return get_setting(
+            self.request.registry.settings, "default_model_adapter", default=None
+        )
+
+    @property
     def key(self):
         """Key used to refer to item or items in returned data."""
         raise NotImplementedError("key property must be implemented in subclasses")
@@ -31,18 +47,106 @@ class SQLAlchemyResource(Resource):
         super().__init__(request)
         self.dbsession = request.dbsession
 
-    def extract_fields(self, items):
+    def default_response_fields(self, item):
+        """Get default fields to include in response."""
+        model = self.model
+        request = self.request
+        settings = request.registry.settings
+        getter = get_setting(settings, "default_response_fields", default=None)
+        if getter:
+            return getter(self, model, item, request)
+        return self.default_default_response_fields(model, item, request)
+
+    def default_default_response_fields(self, model, item, request):
+        info = inspect(model)
+        fields = set(attr.key for attr in info.column_attrs)
+        return fields
+
+    def response_fields(self, item):
+        """Get fields to include in response.
+
+        By default, all column attributes will be included. To include
+        additional fields::
+
+            field=*&field=x&field=y&field=z
+
+        The default fields plus ``x``, ``y``, and ``z`` will be
+        included.
+
+        To exclude some default fields::
+
+            field=*&field=-d&field=-e&field=-f
+
+        The default fields except ``d``, ``e``, and ``f`` will be
+        included.
+
+        To specify only some fields::
+
+            field=a&field=b&field=c
+
+        Only fields ``a``, ``b``, and ``c`` will be included.
+
+        Fields can be passed via one or more ``field`` request
+        parameters or* via a single ``fields`` request parameter
+        formatted as a comma-separated list. These are equivalent::
+
+            field=a&field=b&field=c
+            fields=a,b,c
+
+        """
         params = self.request.GET
-        fields = get_param(params, "fields", multi=True, default=None)
-        if not fields:
-            return items
-        new_items = []
-        for item in items:
-            new_item = {}
-            for name in fields:
-                new_item[name] = getattr(item, name)
-            new_items.append(new_item)
-        return new_items
+        specified = get_param(params, "field", multi=True, default=None)
+        specified = specified or get_param(params, "fields", list, default=None)
+        specified = specified or ["*"]
+
+        fields = set()
+
+        # XXX: Exclusions complicate things and I'm not sure how useful
+        #      they are, especially when selecting sub-fields.
+        # excluded_fields = set()
+
+        for spec in specified:
+            if spec == "*":
+                fields.update(self.default_response_fields(item))
+            # elif spec.startswith("-"):
+            #     excluded_fields.add(spec[1:])
+            elif spec.startswith("+"):
+                fields.add(spec[1:])
+            else:
+                fields.add(spec)
+
+        # fields = fields - excluded_fields
+        return fields
+
+    def extract_fields(self, item):
+        fields = self.response_fields(item)
+        return self._extract_fields(item, fields)
+
+    def _extract_fields(self, item, fields):
+        request = self.request
+        new_item = {}
+        for name in fields:
+            name, *rest = name.split(".", 1)
+            obj = getattr(item, name)
+            if callable(obj):
+                obj = obj(request)
+            if rest:
+                if isinstance(obj, Sequence) and not isinstance(obj, str):
+                    result = [self._extract_fields(sub_obj, rest) for sub_obj in obj]
+                    if name in new_item:
+                        for i, sub_obj in enumerate(result):
+                            new_item[name][i].update(sub_obj)
+                    else:
+                        new_item[name] = result
+                else:
+                    result = self._extract_fields(obj, rest)
+                    if name in new_item:
+                        new_item[name].update(result)
+                    else:
+                        new_item[name] = result
+            else:
+                new_item[name] = obj
+        return new_item
 
 
 class SQLAlchemyContainerResource(SQLAlchemyResource):
@@ -93,7 +197,9 @@ class SQLAlchemyContainerResource(SQLAlchemyResource):
         items = q.all()
         if not wrapped:
             return items
-        items = self.extract_fields(items)
+        if self.model_adapter:
+            items = [self.model_adapter(item, self.request) for item in items]
+        items = [self.extract_fields(item) for item in items]
         data[self.key] = items
         return data
 
@@ -230,7 +336,9 @@ class SQLAlchemyItemResource(SQLAlchemyResource):
             raise exception_response(404, detail=detail)
         if not wrapped:
             return item
-        item = self.extract_fields([item])[0]
+        if self.model_adapter:
+            item = self.model_adapter(item, self.request)
+        item = self.extract_fields(item)
         return {self.key: item}
 
     def patch(self):
