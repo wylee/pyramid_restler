@@ -18,7 +18,6 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.doctest",
     "sphinx.ext.intersphinx",
-    "repoze.sphinx.autointerface",
 ]
 
 templates_path = ["_templates"]

@@ -40,7 +40,6 @@ flake8 = "*"
 mypy = "*"
 psycopg2-binary = "*"
 pyramid_mako = "*"
-"repoze.sphinx.autointerface" = "*"
 runcommands = { version = "*", allow-prereleases = true }
 sphinx = "*"
 sqlalchemy = "*"
