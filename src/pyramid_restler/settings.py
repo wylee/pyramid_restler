@@ -20,6 +20,7 @@ DEFAULT_SETTINGS = {
     "default_response_fields": None,
     "resource_methods": DEFAULT_RESOURCE_METHODS,
 }
+"""Default settings."""
 
 
 TYPES: Dict[str, Type] = {

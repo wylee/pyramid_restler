@@ -6,21 +6,40 @@ API
 Configuration
 -------------
 
+.. autofunction:: pyramid_restler.config.add_json_adapters
+
 .. autofunction:: pyramid_restler.config.add_resource
 
-.. autofunction:: pyramid_restler.config.enable_POST_tunneling
+.. autofunction:: pyramid_restler.config.add_resources
 
-View
-----
+.. autofunction:: pyramid_restler.config.enable_cors
+
+.. autofunction:: pyramid_restler.config.enable_post_tunneling
+
+Settings
+--------
+
+.. autodata:: pyramid_restler.settings.DEFAULT_SETTINGS
+
+.. autofunction:: pyramid_restler.settings.get_setting
+
+Views
+-----
 
 .. autoclass:: pyramid_restler.view.ResourceView
    :members:
 
-.. autoclass:: pyramid_restler.view.ResourceMethodConfig
+.. autoclass:: pyramid_restler.view.ResourceViewConfig
    :members:
 
-Model
------
+Resources
+---------
+
+.. autoclass:: pyramid_restler.resource.Resource
+   :members:
+
+SQLAlchemy Resource Types
+-------------------------
 
 .. autoclass:: pyramid_restler.sqlalchemy.SQLAlchemyORMContainerResource
    :members:
