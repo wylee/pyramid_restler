@@ -219,13 +219,13 @@ def add_resource(
 
 @contextmanager
 def add_resources(self: Configurator, path_prefix, **shared_kwargs):
-    """Add resources at path prefix.
+    """Add multiple resources at the specified path prefix.
 
     Example::
 
         with config.add_resources("/api") as add_resource:
-            add_resource(".resources.SomeResource")
-            add_resource(".resources.SomeOtherResource")
+            add_resource(".resources.SomeResource")       # -> /api/some
+            add_resource(".resources.SomeOtherResource")  # -> /api/some-other
 
     """
 
@@ -237,10 +237,12 @@ def add_resources(self: Configurator, path_prefix, **shared_kwargs):
 
 
 def enable_cors(self: Configurator):
-    """Enable CORS permissively.
+    """Enable CORS permissively (for use in development).
 
-    This is allows CORS requests from *anywhere*, which is probably not
-    what you want. Use with caution.
+    This allows CORS requests from *anywhere*, which is probably not
+    what you want, other than in development.
+
+    .. warning:: Use with CAUTION.
 
     """
     self.add_subscriber(add_cors_headers, NewResponse)
