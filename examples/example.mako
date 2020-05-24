@@ -2,12 +2,57 @@
   <head>
     <title>pyramid_restler Example</title>
     <style>
+      html {
+        box-sizing: border-box;
+        font-family: Verdana, Arial, sans-serif;
+        font-size: 16px;
+      }
+
+      form {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+      }
+
+      form > * {
+        margin-right: 4px;
+      }
+
+      form > *:last-child {
+        margin-right: 0;
+      }
+
+      input {
+        border: 1px solid gray;
+        border-radius: 2px;
+        font-size: 14px;
+        height: 32px;
+        padding: 4px;
+        width: 128px;
+      }
+
+      input[type=submit] {
+        width: 64px;
+      }
+
       table {
         border-collapse: collapse;
+        border-radius: 2px;
       }
+
       table, th, td {
         border: 1px solid black;
       }
+
+      th {
+        font-weight: bold;
+      }
+
+      th, td {
+        margin: 0;
+        padding: 4px;
+      }
+
       form {
         margin: 0;
         padding: 0;
@@ -16,55 +61,84 @@
   </head>
 
   <body>
-    <h2>Things</h2>
+    <h1>
+      <a href="${request.route_url('root')}">SQLAlchemy Example</a>
+    </h1>
 
-    <table id="things">
+    <h2>Collection</h2>
+
+    <table>
       <tr>
         <th>ID</th>
         <th>Title</th>
         <th>Description</th>
         <th>GET</th>
         <th>DELETE</th>
-     </tr>
-      % for thing in things:
-        ${self.thing(thing)}
+      </tr>
+      % for item in items:
+        ${self.item(item)}
       % endfor
     </table>
 
     <p>
-      <a href="/things">GET collection as JSON</a>
+      <a href="${request.route_path('sqlalchemy.collection')}">
+        GET collection as JSON
+      </a>
     </p>
 
-    <h2>Create Thing</h2>
+    <h2>Add Item</h2>
 
-    <form method="post" action="/things">
-      Title: <input type="text" name="title" /><br />
-      Description: <input type="text" name="description" /><br />
-      <input type="submit" value="POST /thing" />
+    <form method="post" action="${request.route_path('sqlalchemy.collection')}">
+      <input type="text" name="title" placeholder="Title">
+      <input type="text" name="description" placeholder="Description">
+      <input type="submit" value="Add">
     </form>
 
-    <h2>Edit Thing 1</h2>
-
-    <form method="post" action="/thing/1">
-      <input type="hidden" name="$method" value="PUT">
-      <input type="text" name="title" /> Title<br />
-      <input type="text" name="description" /> Description<br />
-      <input type="submit" value="PUT /thing/1" />
-    </form>
+    % for item in items:
+      <h2>Edit Item ${item['id']}</h2>
+      <form method="post" action="${request.route_path('sqlalchemy.item', id=item['id'])}">
+        <input type="hidden" name="$method" value="PUT">
+        <input type="text" name="title" value="${item['title']}" placeholder="Title">
+        <input type="text"
+               name="description"
+               value="${item['description']}"
+               placeholder="Description"
+        >
+        <input type="submit" value="Update">
+      </form>
+    % endfor
   </body>
 </html>
 
-
-<%def name="thing(thing)">
-  <tr id="thing-${thing.id}">
-    <td class="thing-field-id">${thing.id}</td>
-    <td class="thing-field-title">${thing.title}</td>
-    <td class="thing-field-description">${thing.description}</td>
-    <td><a class="thing-get-link" href="/thing/${thing.id}">GET /thing/${thing.id}</a></td>
+<%def name="item(item)">
+  <tr id="item-${item['id']}">
+    <td class="item-field-id">
+      ${item['id']}
+    </td>
+    <td class="item-field-title">
+      ${item['title']}
+    </td>
+    <td class="item-field-description">
+      ${item['description']}
+    </td>
     <td>
-      <form class="delete-member-form" method="POST" action="/thing/${thing.id}">
-        <input type="hidden" name="$method" value="DELETE" />
-        <input type="submit" value="DELETE /thing/${thing.id}" />
+      <a href="${request.route_path('sqlalchemy.item', id=item['id'])}"
+         class="item-get-link"
+      >
+        ${request.route_path('sqlalchemy.item', id=item['id'])}
+      </a>
+    </td>
+    <td>
+      <form method="post"
+            action="${request.route_path('sqlalchemy.item', id=item['id'])}"
+            class="delete-member-form"
+      >
+        <input type="hidden" name="$method" value="DELETE">
+        <input type="hidden"
+               name="$next"
+               value="${request.route_path('sqlalchemy.collection')}"
+        >
+        <input type="submit" value="Delete">
       </form>
     </td>
   </tr>

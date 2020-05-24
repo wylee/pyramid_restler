@@ -11,10 +11,15 @@ def install(update=False):
 
 @command
 def format_code(check=False, where="./"):
-    printer.hr("Formatting code with black")
-    result = _local(
-        ("black", "--check" if check else None, where), raise_on_error=not check,
-    )
+    if check:
+        printer.hr("Checking code formatting code with black")
+        check_arg = "--check"
+        raise_on_error = True
+    else:
+        printer.hr("Formatting code with black")
+        check_arg = None
+        raise_on_error = False
+    result = _local(("black", check_arg, where), raise_on_error=raise_on_error)
     return result
 
 

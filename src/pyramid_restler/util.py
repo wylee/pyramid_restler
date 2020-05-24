@@ -4,6 +4,7 @@ from pyramid.httpexceptions import exception_response
 
 
 NOT_SET = object()
+"""Represents the complete absence of a value."""
 
 
 def as_bool(string: str) -> bool:
@@ -95,7 +96,8 @@ def get_param(
                 v = converter(v)
             except (TypeError, ValueError):
                 raise exception_response(
-                    400, f"Could not parse parameter {name} with {converter}: {v!r}",
+                    400,
+                    detail=f"Could not parse parameter {name} with {converter}: {v!r}",
                 )
         return v
 
@@ -106,11 +108,8 @@ def get_param(
 
     if multi:
         values = params.getall(name)
-        converted_values = []
-        for value in values:
-            value = convert(value)
-            converted_values.append(value)
-        return converted_values
+        values = [convert(value) for value in values]
+        return values
 
     value = params[name]
     value = convert(value)

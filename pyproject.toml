@@ -44,6 +44,8 @@ runcommands = { version = "*", allow-prereleases = true }
 sphinx = "*"
 sqlalchemy = "*"
 tox = "*"
+waitress = "*"
+pyramid_debugtoolbar = "*"
 
 [tool.black]
 target-version = ["py36"]

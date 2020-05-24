@@ -59,8 +59,9 @@ def add_json_adapters(self: Configurator, *adapters):
 
 def add_resource(
     self: Configurator,
-    resource_factory,
+    resource_class,
     name=None,
+    renderers=["json"],
     # Resource args
     acl=None,
     # Route args
@@ -71,12 +72,73 @@ def add_resource(
     # View args
     view=ResourceView,
     permission=None,
-    renderers=["json"],
     view_args=None,
 ):
     """Add routes and views for a resource.
 
     Given a resource, generates a set of routes and associated views.
+
+    Args:
+        resource_class: The class that implements the resource.
+
+        name: The base route name. If not specified, this will be
+            computed from the resource class's module path and class
+            name as follows:
+
+            - If the class name ends with "Resource", that's stripped
+              off
+            - The class name is then converted to camel case
+            - The module name containing the class is joined to the
+              converted class name with a dot
+
+            So, for a resource class named ``CollectionResource`` in a
+            module named ``api``, the computed name will be
+            "api.collection".
+
+        renderers: A list of renderers to generate routes and views for.
+            This can include entries like "json" and/or "template.mako".
+
+            For each renderer, a route with an extension (like ".json"
+            and/or ".html") is generated with a view for each
+            corresponding resource method. In this case, the response is
+            rendered according to the extension.
+
+            In addition, a route with *no* extension is generated with
+            a view for each corresponding resource method. In this case,
+            the response is rendered according to the Accept header in
+            the request.
+
+        acl: An ACL list that will be attached to the resource class as
+            its ``__acl__`` attribute. If this isn't specified and the
+            resource class doesn't have an ``__acl__`` attribute
+            already, the default ACL will be attached instead (assuming
+            a default ACL is configured).
+
+        path: The base route path. If not specified, this will be
+            computed from ``name`` by replacing dots with slashes
+            and underscores with dashes. For the example above, the
+            computed path would be "/api/collection".
+
+        path_prefix: If specified, this will be prepended to all
+            generated route paths.
+
+        id_field: If specified, an ID-field path segment will be
+            appended to ``path``. E.g., if "id" is passed, the base path
+            will be set to "/whatever/path/{id}". This is useful when an
+            explicit ``path`` isn't passed.
+
+        route_args: Common route args that will be passed to *every*
+            call to ``config.add_view()``.
+
+        view: The view class that will call methods on the resource
+            class. This is optional because in many cases the included/
+            default view class will suffice.
+
+        permission: Permission that will be set on all generated views.
+            This is a special case for convenience.
+
+        view_args: Common view args that will be passed to *every* call
+            to ``config.add_view()``.
 
     Settings can be set under the "pyramid_restler" key:
 
@@ -88,16 +150,17 @@ def add_resource(
       specified, the default :data:`RESOURCE_METHODS` will be used.
 
     """
-    resource_factory = self.maybe_dotted(resource_factory)
+    resource_class = self.maybe_dotted(resource_class)
     view = self.maybe_dotted(view)
 
     if name is None:
-        module_name = resource_factory.__module__.rsplit(".", 1)[-1]
-        class_name = camel_to_underscore(resource_factory.__name__)
-        suffix = "_resource"
-        if class_name.endswith(suffix):
-            class_name = class_name[: -len(suffix)]
-        name = f"{module_name}.{class_name}"
+        module_name = resource_class.__module__.rsplit(".", 1)[-1]
+        name = resource_class.__name__
+        suffix = "Resource"
+        if name.endswith(suffix):
+            name = name[: -len(suffix)]
+        name = camel_to_underscore(name)
+        name = f"{module_name}.{name}"
         log.debug(f"Computed route name: {name}")
 
     if path is None:
@@ -116,17 +179,17 @@ def add_resource(
         path = posixpath.join(path, f"{{{id_field}}}")
 
     if acl is not None:
-        resource_factory.__acl__ = acl
+        resource_class.__acl__ = acl
     else:
-        acl = getattr(resource_factory, "__acl__", None)
+        acl = getattr(resource_class, "__acl__", None)
         if acl is None:
             default_acl = get_setting(self.get_settings(), "default_acl")
             if default_acl is not None:
                 log.debug(
-                    f"Setting {resource_factory.__name__}.__acl__ "
+                    f"Setting {resource_class.__name__}.__acl__ "
                     f"to default ACL: {default_acl}"
                 )
-                resource_factory.__acl__ = default_acl
+                resource_class.__acl__ = default_acl
 
     route_args = {} if route_args is None else route_args
 
@@ -156,14 +219,14 @@ def add_resource(
         log.debug(
             f"Adding route {route_name} "
             f"with pattern {pattern} "
-            f"for factory {resource_factory.__name__} "
+            f"for factory {resource_class.__name__} "
             f"responding to {', '.join(allowed_methods)} "
             f"accepting content type {', '.join(accept) if accept else 'ANY'}"
         )
         self.add_route(
             route_name,
             pattern,
-            factory=resource_factory,
+            factory=resource_class,
             request_method=allowed_methods,
             accept=accept,
             **route_args,
@@ -224,8 +287,11 @@ def add_resources(self: Configurator, path_prefix, **shared_kwargs):
     Example::
 
         with config.add_resources("/api") as add_resource:
-            add_resource(".resources.SomeResource")       # -> /api/some
-            add_resource(".resources.SomeOtherResource")  # -> /api/some-other
+            add_resource(".resources.CollectionResource")
+            # -> /api/resources/collection
+
+            add_resource(".resources.ItemResource")
+            # -> /api/resources/item
 
     """
 
@@ -242,7 +308,8 @@ def enable_cors(self: Configurator):
     This allows CORS requests from *anywhere*, which is probably not
     what you want, other than in development.
 
-    .. warning:: Use with CAUTION.
+    .. warning:: Use with CAUTION. See :func:`add_cors_headers` for
+        additional info.
 
     """
     self.add_subscriber(add_cors_headers, NewResponse)

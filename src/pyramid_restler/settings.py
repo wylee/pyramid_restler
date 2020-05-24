@@ -1,7 +1,9 @@
-from typing import Any, Callable, Dict, Type
+from typing import Any, Callable, Dict, List, Type
 
 from pyramid.path import DottedNameResolver
 from pyramid.settings import asbool, aslist
+
+from .util import NOT_SET
 
 
 DEFAULT_RESOURCE_METHODS = (
@@ -27,11 +29,13 @@ TYPES: Dict[str, Type] = {
     "default_acl": object,
     "default_model_adapter": Callable[..., Any],
     "default_response_fields": Callable[..., Any],
-    "resource_methods": list,
+    "resource_methods": List,
 }
+"""Types of the :data:`DEFAULT_SETTINGS`.
 
+Used to determine how to convert settings values.
 
-NOT_SET = object()
+"""
 
 
 def get_setting(all_settings, name, default=NOT_SET):
@@ -58,7 +62,7 @@ def get_setting(all_settings, name, default=NOT_SET):
         elif type_ is Callable[..., Any]:
             resolver = DottedNameResolver()
             converter = resolver.maybe_resolve
-        elif type_ is list:
+        elif type_ is List:
             converter = aslist
         elif type_ is object:
             resolver = DottedNameResolver()

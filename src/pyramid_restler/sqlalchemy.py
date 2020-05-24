@@ -214,37 +214,39 @@ class SQLAlchemyContainerResource(SQLAlchemyResource):
         params = self.request.GET
         filters = get_param(params, "filters", converter=json.loads, default=None)
 
-        if filters:
-            model = self.model
-            operations = []
-            boolean_operator = filters.pop("$operator", "and").lower()
-            supported_operators = self.filtering_supported_operators
+        if not filters:
+            return q
 
-            for name, value in filters.items():
-                name, *operator = name.split(" ", 1)
-                try:
-                    col = getattr(model, name)
-                except AttributeError:
-                    raise exception_response(
-                        400, detail=f"Unknown column on model {model.__name__}: {name}"
-                    )
-                operator = operator[0].lower() if operator else "="
-                if operator not in supported_operators:
-                    raise exception_response(
-                        400, detail=f"Unsupported SQL operator: {operator}"
-                    )
-                operator = supported_operators[operator]
-                operator = getattr(col, operator)
-                operations.append(operator(value))
+        model = self.model
+        operations = []
+        boolean_operator = filters.pop("$operator", "and").lower()
+        supported_operators = self.filtering_supported_operators
 
-            if boolean_operator == "and":
-                q = q.filter(and_(*operations))
-            elif boolean_operator == "or":
-                q = q.filter(or_(*operations))
-            else:
+        for name, value in filters.items():
+            name, *operator = name.split(" ", 1)
+            try:
+                col = getattr(model, name)
+            except AttributeError:
                 raise exception_response(
-                    400, detail=f"Unsupported boolean operator: {boolean_operator}"
+                    400, detail=f"Unknown column on model {model.__name__}: {name}"
                 )
+            operator = operator[0].lower() if operator else "="
+            if operator not in supported_operators:
+                raise exception_response(
+                    400, detail=f"Unsupported SQL operator: {operator}"
+                )
+            operator = supported_operators[operator]
+            operator = getattr(col, operator)
+            operations.append(operator(value))
+
+        if boolean_operator == "and":
+            q = q.filter(and_(*operations))
+        elif boolean_operator == "or":
+            q = q.filter(or_(*operations))
+        else:
+            raise exception_response(
+                400, detail=f"Unsupported boolean operator: {boolean_operator}"
+            )
 
         return q
 
@@ -252,20 +254,24 @@ class SQLAlchemyContainerResource(SQLAlchemyResource):
         params = self.request.GET
         ordering = get_param(params, "ordering", multi=True, default=None)
         ordering = ordering or self.ordering_default
-        if ordering:
-            order_by = []
-            for item in ordering:
-                if isinstance(item, str):
-                    if item.startswith("-"):
-                        item = item[1:]
-                        desc = True
-                    else:
-                        desc = False
-                    item = getattr(self.model, item)
-                    if desc:
-                        item = item.desc()
-                order_by.append(item)
-            q = q.order_by(*order_by)
+
+        if not ordering:
+            return q
+
+        order_by = []
+        for item in ordering:
+            if isinstance(item, str):
+                if item.startswith("-"):
+                    item = item[1:]
+                    desc = True
+                else:
+                    desc = False
+                item = getattr(self.model, item)
+                if desc:
+                    item = item.desc()
+            order_by.append(item)
+        q = q.order_by(*order_by)
+
         return q
 
     def apply_pagination_to_query(self, q):

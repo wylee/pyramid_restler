@@ -1,25 +1,29 @@
-from dataclasses import dataclass, field
+import logging
 
-from pyramid.response import Response
+from pyramid.httpexceptions import HTTPSeeOther, HTTPNoContent
+from pyramid.request import Request
 
 
-__all__ = ["ResourceView", "ResourceViewConfig"]
+__all__ = ["ResourceView"]
+
+
+log = logging.getLogger(__name__)
 
 
 class ResourceView:
-    def __init__(self, context, request):
+    def __init__(self, context, request: Request):
         self.resource = context
         self.request = request
 
         # XXX: This is for Pyramid, in case it needs it for something
         self.context = context
 
-    def get(self):
-        result = self.resource.get()
-        return self.get_standard_response(result)
-
     def delete(self):
         result = self.resource.delete()
+        return self.get_standard_response(result)
+
+    def get(self):
+        result = self.resource.get()
         return self.get_standard_response(result)
 
     def patch(self):
@@ -35,32 +39,60 @@ class ResourceView:
         return self.get_standard_response(result)
 
     def get_standard_response(self, data):
-        if data is not None:
-            # Response has content
+        """Get a standard response.
+
+        When there's no data, return a ``204 No Content`` response
+        regardless of the request method or configured renderers.
+        Otherwise...
+
+        For XHR requests, return a ``200 OK`` response with rendered
+        data for *all* request methods (typically JSON).
+
+        For non-XHR requests:
+
+        - Return a ``200 OK`` response with rendered data for GET
+          requests (typically HTML rendered from a template).
+
+        - Return a ``303 See Other`` response for DELETE, PATCH, PUT,
+          and POST requests. If a URL is specified via the ``$next``
+          GET or POST parameter, it will be used as redirect location.
+          Otherwise, the URL of the current resource will be used.
+
+        """
+        if data is None:
+            return HTTPNoContent()
+
+        request = self.request
+        method = request.method
+
+        if method == "GET" or request.is_xhr:
             converter = getattr(self.resource, "response_converter", None)
             if converter:
                 data = converter(data)
             return data
-        # Response has no content
-        return Response(204)
 
+        location = request.params.get("$next")
 
-@dataclass
-class ResourceViewConfig:
-
-    view_args: dict = field(default_factory=dict)
-
-
-def resource_view_config(**view_args):
-    """Specify view config for resource method in resource view.
-
-    The supplied keyword args will be passed through to Pyramid's
-    ``Configurator.add_view()``.
-
-    """
-
-    def wrapper(view_method):
-        view_method.resource_view_config = ResourceViewConfig(view_args=view_args)
-        return view_method
-
-    return wrapper
+        # Redirect after POST et al.
+        if method == "DELETE":
+            # XXX: It might be nice to *automatically* redirect to the
+            # associated collection resource on DELETE, but that seems
+            # complicated. For now, we'll stick with the explicit next-
+            # URL approach.
+            if not location:
+                log.info(
+                    "Pass a next URL using the $next GET or POST "
+                    "parameter to avoid 404s on DELETE for route: %s",
+                    request.matched_route.name,
+                )
+            location = location or request.path_info
+            return HTTPSeeOther(location=location)
+        if method in ("PATCH", "POST", "PUT"):
+            # Redirect back to the current resource.
+            #
+            # XXX: For collection resources, it's debatable as to
+            # whether it's preferable to redirect to the new item or
+            # back to the collection, but the latter doesn't require
+            # any special configuration or logic.
+            location = location or request.path_info
+            return HTTPSeeOther(location=location)

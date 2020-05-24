@@ -27,6 +27,7 @@ from pyramid_restler.view import ResourceView
 class DummyRequest(DummyRequest):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.is_xhr = True
         self.registry.settings = {}
 
     @property
