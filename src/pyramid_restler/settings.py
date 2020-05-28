@@ -9,7 +9,7 @@ from .util import NOT_SET
 DEFAULT_RESOURCE_METHODS = (
     "delete",
     "get",
-    "head",
+    "options",
     "patch",
     "post",
     "put",

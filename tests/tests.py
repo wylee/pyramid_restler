@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from pyramid.config import Configurator
 from pyramid.events import NewRequest
-from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound
+from pyramid.httpexceptions import HTTPNotFound, HTTPMethodNotAllowed
 from pyramid.testing import DummyRequest
 
 try:
@@ -279,7 +279,7 @@ class TestItemResourceView(TestBase):
 
 
 class TestAddResource(TestCase):
-    def _make_config(self, autocommit=True, with_add_view=True):
+    def _make_config(self, autocommit=True):
         config = Configurator(autocommit=autocommit)
         config.add_view = self._make_add_view(config)
         config.include("pyramid_restler")
@@ -312,12 +312,12 @@ class TestAddResource(TestCase):
     def test_add_container_resource(self):
         config = self._make_config()
         config.add_resource(ContainerResource)
-        self.assertEqual(10, config.add_view.count)
+        self.assertEqual(12, config.add_view.count)
 
     def test_add_item_resource(self):
         config = self._make_config()
         config.add_resource(ItemResource)
-        self.assertEqual(10, config.add_view.count)
+        self.assertEqual(12, config.add_view.count)
 
 
 class TestPOSTTunneling(TestCase):
@@ -385,4 +385,6 @@ class TestPOSTTunneling(TestCase):
         app = self._make_app()
         request = DummyRequest(params={"$method": "PANTS"}, method="POST")
         self._assert_before(request)
-        self.assertRaises(HTTPBadRequest, app.registry.notify, NewRequest(request))
+        self.assertRaises(
+            HTTPMethodNotAllowed, app.registry.notify, NewRequest(request)
+        )

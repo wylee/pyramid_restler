@@ -48,7 +48,7 @@ class Item(Base):
         }
 
 
-class CollectionResource(SQLAlchemyContainerResource):
+class ContainerResource(SQLAlchemyContainerResource):
 
     model = Item
 
@@ -84,12 +84,12 @@ def main(global_config, **settings):
 
         # These are the pyramid_restler bits
         config.add_resource(
-            CollectionResource,
+            ContainerResource,
             name="root",
             path="/",
             renderers=["json", "example.mako"],
         )
-        config.add_resource(CollectionResource, renderers=["json", "example.mako"])
+        config.add_resource(ContainerResource, renderers=["json", "example.mako"])
         config.add_resource(ItemResource, id_field="id")
         config.enable_post_tunneling()
 

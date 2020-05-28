@@ -19,24 +19,28 @@ class ResourceView:
         self.context = context
 
     def delete(self):
-        result = self.resource.delete()
-        return self.get_standard_response(result)
+        data = self.resource.delete()
+        return self.get_standard_response(data)
 
     def get(self):
-        result = self.resource.get()
-        return self.get_standard_response(result)
+        data = self.resource.get()
+        return self.get_standard_response(data)
+
+    def options(self):
+        options = self.resource.options()
+        return HTTPNoContent(headers=options)
 
     def patch(self):
-        result = self.resource.patch()
-        return self.get_standard_response(result)
+        data = self.resource.patch()
+        return self.get_standard_response(data)
 
     def post(self):
-        result = self.resource.post()
-        return self.get_standard_response(result)
+        data = self.resource.post()
+        return self.get_standard_response(data)
 
     def put(self):
-        result = self.resource.put()
-        return self.get_standard_response(result)
+        data = self.resource.put()
+        return self.get_standard_response(data)
 
     def get_standard_response(self, data):
         """Get a standard response.
@@ -65,7 +69,7 @@ class ResourceView:
         request = self.request
         method = request.method
 
-        if method == "GET" or request.is_xhr:
+        if method in ("GET", "HEAD") or request.is_xhr:
             converter = getattr(self.resource, "response_converter", None)
             if converter:
                 data = converter(data)
@@ -76,7 +80,7 @@ class ResourceView:
         # Redirect after POST et al.
         if method == "DELETE":
             # XXX: It might be nice to *automatically* redirect to the
-            # associated collection resource on DELETE, but that seems
+            # associated container resource on DELETE, but that seems
             # complicated. For now, we'll stick with the explicit next-
             # URL approach.
             if not location:
@@ -90,9 +94,9 @@ class ResourceView:
         if method in ("PATCH", "POST", "PUT"):
             # Redirect back to the current resource.
             #
-            # XXX: For collection resources, it's debatable as to
+            # XXX: For container resources, it's debatable as to
             # whether it's preferable to redirect to the new item or
-            # back to the collection, but the latter doesn't require
+            # back to the container, but the latter doesn't require
             # any special configuration or logic.
             location = location or request.path_info
             return HTTPSeeOther(location=location)

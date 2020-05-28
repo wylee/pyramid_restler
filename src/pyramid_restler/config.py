@@ -5,9 +5,9 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import List
 
-from pyramid.config import Configurator
+from pyramid.config import Configurator, ConfigurationError
 from pyramid.events import NewRequest, NewResponse
-from pyramid.httpexceptions import HTTPBadRequest
+from pyramid.httpexceptions import exception_response
 from pyramid.interfaces import IRendererFactory
 
 from .cors import add_cors_headers
@@ -76,10 +76,13 @@ def add_resource(
 ):
     """Add routes and views for a resource.
 
-    Given a resource, generates a set of routes and associated views.
+    Given a resource (class), generates a set of routes and associated
+    views.
 
     Args:
-        resource_class: The class that implements the resource.
+        resource_class: The class that implements the resource. An
+            ``allowed_methods`` attribute will be attached to this
+            class (if it doesn't already have that attribute).
 
         name: The base route name. If not specified, this will be
             computed from the resource class's module path and class
@@ -91,9 +94,9 @@ def add_resource(
             - The module name containing the class is joined to the
               converted class name with a dot
 
-            So, for a resource class named ``CollectionResource`` in a
+            So, for a resource class named ``ContainerResource`` in a
             module named ``api``, the computed name will be
-            "api.collection".
+            "api.container".
 
         renderers: A list of renderers to generate routes and views for.
             This can include entries like "json" and/or "template.mako".
@@ -117,7 +120,7 @@ def add_resource(
         path: The base route path. If not specified, this will be
             computed from ``name`` by replacing dots with slashes
             and underscores with dashes. For the example above, the
-            computed path would be "/api/collection".
+            computed path would be "/api/container".
 
         path_prefix: If specified, this will be prepended to all
             generated route paths.
@@ -142,7 +145,7 @@ def add_resource(
 
     Settings can be set under the "pyramid_restler" key:
 
-    - default_acl: Default ACL to attach to resource factories that
+    - default_acl: Default ACL to attach to resource classes that
       don't have an __acl__ attribute (when ``acl`` isn't specified).
 
     - resource_methods: Methods on resource classes that will be
@@ -151,11 +154,13 @@ def add_resource(
 
     """
     resource_class = self.maybe_dotted(resource_class)
+    resource_name = resource_class.__name__
     view = self.maybe_dotted(view)
+    view_name = view.__name__
 
     if name is None:
         module_name = resource_class.__module__.rsplit(".", 1)[-1]
-        name = resource_class.__name__
+        name = resource_name
         suffix = "Resource"
         if name.endswith(suffix):
             name = name[: -len(suffix)]
@@ -186,8 +191,7 @@ def add_resource(
             default_acl = get_setting(self.get_settings(), "default_acl")
             if default_acl is not None:
                 log.debug(
-                    f"Setting {resource_class.__name__}.__acl__ "
-                    f"to default ACL: {default_acl}"
+                    f"Setting {resource_name}.__acl__ " f"to default ACL: {default_acl}"
                 )
                 resource_class.__acl__ = default_acl
 
@@ -200,47 +204,68 @@ def add_resource(
 
     resource_methods = get_setting(self.get_settings(), "resource_methods")
     resource_methods = tuple(m.lower() for m in resource_methods)
+    request_methods = tuple(m.upper() for m in resource_methods)
 
-    view_methods = []
+    method_config = []
     allowed_methods = []
+    methods_not_allowed = []
     for method in resource_methods:
         attr = method.lower()
         request_method = method.upper()
-        if hasattr(view, attr):
-            view_method = getattr(view, attr)
-            resource_view_config = getattr(view_method, "resource_view_config", None)
-            view_methods.append((method, request_method, resource_view_config))
+        if hasattr(resource_class, attr):
+            resource_method = getattr(resource_class, attr)
+            resource_config = getattr(resource_method, "resource_config", None)
+            method_config.append((method, request_method, resource_config))
             allowed_methods.append(request_method)
+            if not hasattr(view, attr):
+                raise ConfigurationError(
+                    f"View {view_name} "
+                    f"has no method `{attr}` "
+                    f"corresponding to resource method `{attr}` "
+                )
+        else:
+            methods_not_allowed.append(request_method)
 
-    if not view_methods:
-        raise LookupError(f"No resource view methods found for view: {view.__name__}")
+    if allowed_methods:
+        if not hasattr(resource_class, "allowed_methods"):
+            resource_class.allowed_methods = allowed_methods
+    else:
+        raise ConfigurationError(
+            f"No resource methods found for resource: {resource_name}"
+        )
+
+    if methods_not_allowed:
+        log.debug(
+            f"Resource {resource_name} does not allow these methods: "
+            f"{', '.join(methods_not_allowed)}"
+        )
 
     def add_route(route_name, pattern, accept: List[str] = None):
         log.debug(
             f"Adding route {route_name} "
             f"with pattern {pattern} "
-            f"for factory {resource_class.__name__} "
-            f"responding to {', '.join(allowed_methods)} "
+            f"for resource {resource_name} "
+            f"responding to {', '.join(request_methods)} "
             f"accepting content type {', '.join(accept) if accept else 'ANY'}"
         )
         self.add_route(
             route_name,
             pattern,
             factory=resource_class,
-            request_method=allowed_methods,
+            request_method=request_methods,
             accept=accept,
             **route_args,
         )
 
     def add_views(route_name, renderer, accept: str = None):
-        for attr, request_method, view_config in view_methods:
+        for attr, request_method, view_config in method_config:
             if view_config:
                 args = {**view_config.view_args, **view_args}
             else:
                 args = {**view_args}
 
             log.debug(
-                f"Adding view {view.__name__}.{attr} "
+                f"Adding view {view_name}.{attr} "
                 f"for {route_name} "
                 f"responding to {request_method} "
                 f"accepting content type {accept or 'ANY'} "
@@ -255,6 +280,14 @@ def add_resource(
                 accept=accept,
                 renderer=renderer,
                 **args,
+            )
+
+        for request_method in methods_not_allowed:
+            self.add_view(
+                route_name=route_name,
+                view=method_not_allowed_view,
+                request_method=request_method,
+                accept=accept,
             )
 
     def run():
@@ -287,17 +320,17 @@ def add_resources(self: Configurator, path_prefix, **shared_kwargs):
     Example::
 
         with config.add_resources("/api") as add_resource:
-            add_resource(".resources.CollectionResource")
-            # -> /api/resources/collection
+            add_resource(".resources.ContainerResource")
+            # -> /api/resources/container
 
             add_resource(".resources.ItemResource")
             # -> /api/resources/item
 
     """
 
-    def add(resource_factory, **kwargs):
+    def add(resource_class, **kwargs):
         kwargs = {**shared_kwargs, **kwargs}
-        self.add_resource(resource_factory, path_prefix=path_prefix, **kwargs)
+        self.add_resource(resource_class, path_prefix=path_prefix, **kwargs)
 
     yield add
 
@@ -362,7 +395,7 @@ def enable_post_tunneling(
                 request.headers.pop(header_name, None)
                 request.method = method
             else:
-                raise HTTPBadRequest(disallowed_message)
+                raise exception_response(405, detail=disallowed_message)
 
     self.add_subscriber(new_request_subscriber, NewRequest)
 
@@ -374,3 +407,7 @@ def get_ext_and_accept_for_renderer(renderer):
         ext = renderer
     ext = RENDERER_EXT_MAP.get(ext, ext)
     return ext, RENDERER_ACCEPT_MAP.get(ext)
+
+
+def method_not_allowed_view(request):
+    raise exception_response(405)

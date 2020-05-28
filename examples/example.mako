@@ -81,14 +81,14 @@
     </table>
 
     <p>
-      <a href="${request.route_path('sqlalchemy.collection')}">
-        GET collection as JSON
+      <a href="${request.route_path('sqlalchemy.container.json')}">
+        GET all items as JSON
       </a>
     </p>
 
     <h2>Add Item</h2>
 
-    <form method="post" action="${request.route_path('sqlalchemy.collection')}">
+    <form method="post" action="${request.route_path('sqlalchemy.container')}">
       <input type="text" name="title" placeholder="Title">
       <input type="text" name="description" placeholder="Description">
       <input type="submit" value="Add">
@@ -136,7 +136,7 @@
         <input type="hidden" name="$method" value="DELETE">
         <input type="hidden"
                name="$next"
-               value="${request.route_path('sqlalchemy.collection')}"
+               value="${request.route_path('sqlalchemy.container')}"
         >
         <input type="submit" value="Delete">
       </form>
