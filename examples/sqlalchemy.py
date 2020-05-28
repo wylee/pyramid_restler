@@ -16,6 +16,7 @@ and recreated.
 
 """
 from pyramid.config import Configurator
+from pyramid.csrf import CookieCSRFStoragePolicy
 
 from pyramid_restler.sqlalchemy import (
     SQLAlchemyContainerResource,
@@ -79,6 +80,9 @@ def main(global_config, **settings):
     with config:
         config.include("pyramid_mako")
         config.include("pyramid_restler")
+
+        config.set_csrf_storage_policy(CookieCSRFStoragePolicy())
+        config.set_default_csrf_options(require_csrf=True)
 
         config.add_request_method(db_session_factory, "dbsession", reify=True)
 

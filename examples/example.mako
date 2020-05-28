@@ -89,6 +89,7 @@
     <h2>Add Item</h2>
 
     <form method="post" action="${request.route_path('sqlalchemy.container')}">
+      <input type="hidden" name="csrf_token" value="${get_csrf_token()}">
       <input type="text" name="title" placeholder="Title">
       <input type="text" name="description" placeholder="Description">
       <input type="submit" value="Add">
@@ -98,6 +99,7 @@
       <h2>Edit Item ${item['id']}</h2>
       <form method="post" action="${request.route_path('sqlalchemy.item', id=item['id'])}">
         <input type="hidden" name="$method" value="PUT">
+        <input type="hidden" name="csrf_token" value="${get_csrf_token()}">
         <input type="text" name="title" value="${item['title']}" placeholder="Title">
         <input type="text"
                name="description"
@@ -134,6 +136,7 @@
             class="delete-member-form"
       >
         <input type="hidden" name="$method" value="DELETE">
+        <input type="hidden" name="csrf_token" value="${get_csrf_token()}">
         <input type="submit" value="Delete">
       </form>
     </td>

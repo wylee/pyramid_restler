@@ -1,6 +1,7 @@
 import re
 
 from pyramid.httpexceptions import exception_response
+from pyramid.interfaces import ICSRFStoragePolicy, IDefaultCSRFOptions
 
 
 NOT_SET = object()
@@ -41,11 +42,24 @@ def camel_to_underscore(name):
 def extract_data(request):
     """Extract request data."""
     content_type = request.content_type
+
     if content_type == "application/x-www-form-urlencoded":
-        return request.POST
+        data = request.POST
     elif content_type == "application/json":
-        return request.json_body if request.body else None
-    raise TypeError(f"Cannot extract data for content type: {content_type}")
+        data = request.json_body if request.body else None
+    else:
+        raise TypeError(f"Cannot extract data for content type: {content_type}")
+
+    # Remove CSRF token from data, if present
+    policy = request.registry.queryUtility(ICSRFStoragePolicy)
+    if policy:
+        options = request.registry.queryUtility(IDefaultCSRFOptions)
+        if options:
+            token = options.token
+            if token in data:
+                del data[token]
+
+    return data
 
 
 def get_param(
