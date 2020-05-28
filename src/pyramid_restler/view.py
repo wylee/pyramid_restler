@@ -1,5 +1,6 @@
 import logging
 
+from pyramid.csrf import check_csrf_origin
 from pyramid.httpexceptions import HTTPSeeOther, HTTPNoContent
 from pyramid.request import Request
 
@@ -55,12 +56,18 @@ class ResourceView:
         For non-XHR requests:
 
         - Return a ``200 OK`` response with rendered data for GET
-          requests (typically HTML rendered from a template).
+          requests (typically HTML rendered from a template). For HEAD
+          requests, the data is also returned so that Pyramid can
+          generate a HEAD response.
 
         - Return a ``303 See Other`` response for DELETE, PATCH, PUT,
-          and POST requests. If a URL is specified via the ``$next``
-          GET or POST parameter, it will be used as redirect location.
-          Otherwise, the URL of the current resource will be used.
+          and POST requests:
+
+          - For DELETEs, use the referrer if it's safe (same origin) or
+            fall back to the URL of the current resource.
+
+          - For other methods, fall back to the URL of the current
+            resource (which is always safe).
 
         """
         if data is None:
@@ -75,21 +82,23 @@ class ResourceView:
                 data = converter(data)
             return data
 
-        location = request.params.get("$next")
-
         # Redirect after POST et al.
         if method == "DELETE":
-            # XXX: It might be nice to *automatically* redirect to the
+            # XXX: It might be nice to automatically redirect to the
             # associated container resource on DELETE, but that seems
-            # complicated. For now, we'll stick with the explicit next-
-            # URL approach.
-            if not location:
-                log.info(
-                    "Pass a next URL using the $next GET or POST "
-                    "parameter to avoid 404s on DELETE for route: %s",
+            # complicated. Redirecting back to the referrer is, so we'll
+            # stick with that for that now.
+            if check_csrf_origin(request, raises=False):
+                location = request.referrer
+            else:
+                location = request.path_info
+                log.warning(
+                    "The referrer for this DELETE request isn't from a "
+                    "trusted origin; redirecting back to the current"
+                    "resource (%s) instead, which will result in a 404 "
+                    "response",
                     request.matched_route.name,
                 )
-            location = location or request.path_info
             return HTTPSeeOther(location=location)
         if method in ("PATCH", "POST", "PUT"):
             # Redirect back to the current resource.
@@ -98,5 +107,5 @@ class ResourceView:
             # whether it's preferable to redirect to the new item or
             # back to the container, but the latter doesn't require
             # any special configuration or logic.
-            location = location or request.path_info
+            location = request.path_info
             return HTTPSeeOther(location=location)

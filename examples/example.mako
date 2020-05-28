@@ -134,10 +134,6 @@
             class="delete-member-form"
       >
         <input type="hidden" name="$method" value="DELETE">
-        <input type="hidden"
-               name="$next"
-               value="${request.route_path('sqlalchemy.container')}"
-        >
         <input type="submit" value="Delete">
       </form>
     </td>
