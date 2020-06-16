@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Type
+from typing import Any, Callable, Dict, List
 
 from pyramid.path import DottedNameResolver
 from pyramid.settings import asbool, aslist
@@ -25,8 +25,8 @@ DEFAULT_SETTINGS = {
 """Default settings."""
 
 
-TYPES: Dict[str, Type] = {
-    "default_acl": object,
+TYPES: Dict[str, Any] = {
+    "default_acl": Any,
     "default_model_adapter": Callable[..., Any],
     "default_response_fields": Callable[..., Any],
     "resource_methods": List,
@@ -64,10 +64,11 @@ def get_setting(all_settings, name, default=NOT_SET):
             converter = resolver.maybe_resolve
         elif type_ is List:
             converter = aslist
-        elif type_ is object:
+        elif type_ is Any:
             resolver = DottedNameResolver()
             converter = resolver.maybe_resolve
-        elif type_ is str:
-            converter = str
-        value = converter(value)
+        else:
+            converter = None
+        if converter is not None:
+            value = converter(value)
     return value
