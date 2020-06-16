@@ -39,7 +39,7 @@ def add_cors_headers(event):
                 {
                     "Access-Control-Allow-Origin": origin,
                     "Access-Control-Allow-Methods": "*",
-                    "Access-Control-Allow-Headers": "Content-Type",
+                    "Access-Control-Allow-Headers": "*",
                 }
             )
     else:
