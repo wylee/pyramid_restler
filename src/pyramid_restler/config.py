@@ -7,16 +7,17 @@ from typing import List
 
 from pyramid.config import Configurator, ConfigurationError
 from pyramid.events import NewRequest, NewResponse
-from pyramid.httpexceptions import exception_response
 from pyramid.interfaces import IRendererFactory
 
 from .cors import add_cors_headers
+from .response import exception_response
 from .settings import get_setting
 from .util import camel_to_underscore
 from .view import ResourceView
 
 
 __all__ = [
+    "add_json_adapter",
     "add_json_adapters",
     "add_resource",
     "add_resources",
@@ -40,11 +41,26 @@ RENDERER_ACCEPT_MAP = {
 }
 
 
+def add_json_adapter(self: Configurator, adapter):
+    """Add a JSON adapter."""
+    type_, adapter = adapter
+    renderer = self.registry.getUtility(IRendererFactory, "json")
+    renderer.add_adapter(type_, adapter)
+
+
 def add_json_adapters(self: Configurator, *adapters):
     """Add default and additional JSON adapters.
 
-    Adds default JSON adapters for date, datetime, and decimal objects.
+    Adds default JSON adapters for date, datetime, and decimal objects:
+
+    - date -> ISO date string
+    - datetime -> ISO datetime string
+    - decimal -> string
+
     Also adds additional adapters if specified.
+
+    .. note:: If you don't want the defaults, use
+        :func:`add_json_adapter` instead.
 
     """
     renderer = self.registry.getUtility(IRendererFactory, "json")

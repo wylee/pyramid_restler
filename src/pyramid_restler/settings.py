@@ -18,8 +18,8 @@ DEFAULT_RESOURCE_METHODS = (
 
 DEFAULT_SETTINGS = {
     "default_acl": None,
-    "default_model_adapter": None,
-    "default_response_fields": None,
+    "get_default_response_fields": None,
+    "item_processor": None,
     "resource_methods": DEFAULT_RESOURCE_METHODS,
 }
 """Default settings."""
@@ -27,8 +27,8 @@ DEFAULT_SETTINGS = {
 
 TYPES: Dict[str, Any] = {
     "default_acl": Any,
-    "default_model_adapter": Callable[..., Any],
-    "default_response_fields": Callable[..., Any],
+    "get_default_response_fields": Callable[..., Any],
+    "item_processor": Callable[..., Any],
     "resource_methods": List,
 }
 """Types of the :data:`DEFAULT_SETTINGS`.

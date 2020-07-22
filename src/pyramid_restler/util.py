@@ -1,7 +1,8 @@
 import re
 
-from pyramid.httpexceptions import exception_response
 from pyramid.interfaces import ICSRFStoragePolicy, IDefaultCSRFOptions
+
+from .response import exception_response
 
 
 NOT_SET = object()
@@ -63,9 +64,10 @@ def extract_data(request):
 
 
 def get_param(
-    params,
+    request,
     name,
     converter=None,
+    params=None,
     *,
     multi=False,
     strip=True,
@@ -95,6 +97,9 @@ def get_param(
     specified, a ``KeyError`` will be raised.
 
     """
+    if params is None:
+        params = request.GET
+
     if name not in params:
         if default is NOT_SET:
             params[name]
