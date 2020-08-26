@@ -200,7 +200,7 @@ class SQLAlchemyContainerResource(SQLAlchemyResource):
         self.dbsession.commit()
         return {self.item_key: item}
 
-    def apply_filtering_to_query(self, q):
+    def apply_filtering_to_query(self, q, *, skip_filters=()):
         request = self.request
         filters = get_param(request, "filters", converter=json.loads, default=None)
 
@@ -213,6 +213,8 @@ class SQLAlchemyContainerResource(SQLAlchemyResource):
         supported_operators = self.filtering_supported_operators
 
         for name, value in filters.items():
+            if name in skip_filters:
+                continue
             name, *operator = name.split(" ", 1)
             try:
                 col = getattr(model, name)
