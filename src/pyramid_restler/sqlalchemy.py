@@ -222,7 +222,12 @@ class SQLAlchemyContainerResource(SQLAlchemyResource):
                 raise exception_response(
                     400, detail=f"Unknown column on model {model.__name__}: {name}",
                 )
-            operator = operator[0].lower() if operator else "="
+            if operator:
+                operator = operator[0].lower()
+            elif isinstance(value, Sequence) and not isinstance(value, str):
+                operator = "in"
+            else:
+                operator = "="
             if operator not in supported_operators:
                 raise exception_response(
                     400, detail=f"Unsupported SQL operator: {operator}"
