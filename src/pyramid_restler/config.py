@@ -331,7 +331,7 @@ def add_resource(
 
 
 @contextmanager
-def add_resources(self: Configurator, path_prefix, **shared_kwargs):
+def add_resources(self: Configurator, path_prefix, add_method=None, **shared_kwargs):
     """Add multiple resources at the specified path prefix.
 
     Example::
@@ -344,10 +344,12 @@ def add_resources(self: Configurator, path_prefix, **shared_kwargs):
             # -> /api/resources/item
 
     """
+    if add_method is None:
+        add_method = self.add_resource
 
     def add(resource_class, **kwargs):
         kwargs = {**shared_kwargs, **kwargs}
-        self.add_resource(resource_class, path_prefix=path_prefix, **kwargs)
+        add_method(resource_class, path_prefix=path_prefix, **kwargs)
 
     yield add
 
