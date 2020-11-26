@@ -36,6 +36,7 @@ RENDERER_EXT_MAP = {
 
 
 RENDERER_ACCEPT_MAP = {
+    "csv": "text/csv",
     "json": "application/json",
     "html": "text/html",
 }
