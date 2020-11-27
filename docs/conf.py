@@ -62,10 +62,18 @@ html_theme_options = {
     "page_width": "1200px",
     "fixed_sidebar": True,
     "sidebar_width": "300px",
-    "extra_nav_links": {"Source (GitHub)": github_url,},
+    "extra_nav_links": {
+        "Source (GitHub)": github_url,
+    },
 }
 
-html_sidebars = {"**": ["about.html", "navigation.html", "searchbox.html",]}
+html_sidebars = {
+    "**": [
+        "about.html",
+        "navigation.html",
+        "searchbox.html",
+    ]
+}
 
 html_static_path = []
 
@@ -89,4 +97,12 @@ latex_documents = [
 
 # -- Options for manual page output ------------------------------------
 
-man_pages = [("index", project, f"{project} Documentation", [author_name], 1,)]
+man_pages = [
+    (
+        "index",
+        project,
+        f"{project} Documentation",
+        [author_name],
+        1,
+    )
+]

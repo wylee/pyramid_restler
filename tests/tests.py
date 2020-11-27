@@ -103,7 +103,9 @@ class TestSQLAlchemyContainerResource(TestBase):
 
     def test_create_json(self):
         resource = self.make_resource(
-            method="POST", content_type="application/json", json_body={"value": 4},
+            method="POST",
+            content_type="application/json",
+            json_body={"value": 4},
         )
         data = resource.post()
         self.assertIn("item", data)

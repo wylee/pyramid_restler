@@ -220,7 +220,8 @@ class SQLAlchemyContainerResource(SQLAlchemyResource):
                 col = getattr(model, name)
             except AttributeError:
                 raise exception_response(
-                    400, detail=f"Unknown column on model {model.__name__}: {name}",
+                    400,
+                    detail=f"Unknown column on model {model.__name__}: {name}",
                 )
             if operator:
                 operator = operator[0].lower()
@@ -242,7 +243,8 @@ class SQLAlchemyContainerResource(SQLAlchemyResource):
             q = q.filter(or_(*operations))
         else:
             raise exception_response(
-                400, detail=f"Unsupported boolean operator: {boolean_operator}",
+                400,
+                detail=f"Unsupported boolean operator: {boolean_operator}",
             )
 
         return q

@@ -74,19 +74,22 @@ def test(*tests, fail_fast=False, where="./tests", check=True):
     result = format_code(check=True)
     if result.return_code:
         abort(
-            result.return_code, "Code needs to be formatted with `run format-code`",
+            result.return_code,
+            "Code needs to be formatted with `run format-code`",
         )
 
     result = lint(show_errors=False, raise_on_error=False)
     if result.return_code:
         abort(
-            result.return_code, "Lint needs to be removed (show with `run lint`)",
+            result.return_code,
+            "Lint needs to be removed (show with `run lint`)",
         )
 
     result = type_check(incremental=False, raise_on_error=False)
     if result.return_code:
         abort(
-            result.return_code, "Type errors need to be fixed",
+            result.return_code,
+            "Type errors need to be fixed",
         )
 
 
