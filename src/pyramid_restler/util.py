@@ -1,4 +1,5 @@
 import re
+from typing import Any, List, Union
 
 from pyramid.interfaces import ICSRFStoragePolicy, IDefaultCSRFOptions
 
@@ -70,45 +71,96 @@ def get_param(
     params=None,
     *,
     multi=False,
-    strip=True,
-    convert_empty_to_none=True,
+    strip=False,
+    convert_blank_to_none=True,
     default=NOT_SET,
-):
+) -> Union[Any, List[Any]]:
     """Get the specified request parameter and, optionally, convert it.
 
-    ``params`` can be any dict-like object, but typically it's
-    ``request.GET``.
+    Args:
+        params: Any dict-like object that *also* has ``getone`` and
+            ``getall`` methods. Defaults to ``request.GET``.
 
-    If ``multi=True``, ``params`` *must* have a ``.getall()`` method for
-    extracting multiple parameters of the same ``name``.
+        multi (bool): If set, all params with ``name`` will be collected
+            into a list (even if there's only one such param). If not
+            set, only one param with ``name`` may be present in
+            ``params``.
 
-    If ``strip=True``, the param value or values will be stripped before
-    being converted.
+        strip (bool): If set, param values will be stripped before being
+            converted.
 
-    If ``convert_empty_to_none=True`` and a param value is blank (empty
-    string), it will be converted to ``None``.
+        convert_blank_to_none (bool): If set, blank param values will be
+            converted to ``None``. Blank param values look like ``a=``.
 
-    If a ``converter`` is specified, the value or values will be passed
-    to this callable for conversion (unless converted to ``None``). If a
-    value can't be parsed, a 400 response will be returned immediately.
+        converter (callable): If specified, the value or values will be
+            passed to this callable for conversion (unless converted the
+            value was already converted to ``None``). If a value can't
+            be parsed, a 400 exception response will be raised.
 
-    If the param isn't present and a ``default`` value is specified,
-    that default value will be returned. If no default value is
-    specified, a ``KeyError`` will be raised.
+        default (any): A default value to return when the param isn't
+            present. If the param isn't present and no default value is
+            specified, a ``KeyError`` will be raised.
+
+    Returns:
+        any: When ``multi`` is not set
+        list[any]: When ``multi`` is set
+
+    Raises:
+        KeyError: Param isn't present and no default value is given.
+        KeyError: ``multi=False`` but param is present multiple times.
+        400 response: Param value can't be converted by ``converter``.
+
+    Special handling of flag parameters:
+
+    If ``converter`` is ``bool`` or :func:`as_bool` *and* the param is
+    specified only once *and* the param has *no* value, the param will
+    be handled as a flag. Note that in this example, ``c`` is *not*
+    considered a flag due to the equal sign (it has a *blank* value)::
+
+        >>> from pyramid.request import Request
+        >>> req = Request.blank("/endpoint?a&!b&c=")
+        >>> get_param(req, "a", bool) -> True
+        >>> get_param(req, "b", bool) -> False
 
     """
     if params is None:
         params = request.GET
 
+    if converter is bool:
+        converter = as_bool
+    elif converter is list:
+        converter = as_list
+
+    # Special handling of flags.
+    if converter is as_bool and not multi:
+        maybe_flags = []
+        # NOTE: Splitting is based on urllib.parse.parse_qsl()
+        for group in request.query_string.split("&"):
+            group_params = group.split(";")
+            for param in group_params:
+                if "=" not in param:
+                    if param.startswith("!"):
+                        if param[1:].strip():
+                            maybe_flags.append(param)
+                    elif param.strip():
+                        maybe_flags.append(param)
+        if maybe_flags:
+            count = maybe_flags.count(name)
+            negated_count = maybe_flags.count(f"!{name}")
+            if count == 1 and negated_count == 0:
+                return True
+            if count == 0 and negated_count == 1:
+                return False
+
     if name not in params:
         if default is NOT_SET:
-            params[name]
+            raise KeyError(f"Param not present: {name!r}")
         return default
 
     def convert(v):
         if strip:
             v = v.strip()
-        if not v and convert_empty_to_none:
+        if not v and convert_blank_to_none:
             return None
         if converter:
             try:
@@ -120,16 +172,11 @@ def get_param(
                 )
         return v
 
-    if converter is bool:
-        converter = as_bool
-    elif converter is list:
-        converter = as_list
-
     if multi:
         values = params.getall(name)
         values = [convert(value) for value in values]
         return values
 
-    value = params[name]
+    value = params.getone(name)
     value = convert(value)
     return value
